@@ -1,0 +1,48 @@
+@startuml
+autonumber
+skinparam Style strictuml
+
+actor "Người dùng" as User
+participant "LoginScreen" as FE
+participant "AuthService (FE)" as AuthServiceFE
+participant "AuthController" as Controller
+participant "AuthService (BE)" as Service
+participant "AuthenticationManager" as AuthManager
+participant "UserRepository" as Repo
+participant "JwtUtil" as Jwt
+
+User -> FE: Nhập Username/Email & Password
+FE -> AuthServiceFE: login(username, password)
+
+AuthServiceFE -> Controller: POST /api/auth/login (DTO)
+activate Controller
+
+Controller -> Service: login(DTO)
+activate Service
+
+Service -> AuthManager: authenticate(Token)
+alt Sai thông tin đăng nhập
+    AuthManager -> Service: throw AuthenticationException
+    Service -> Controller: throw AppException("Invalid credentials")
+    Controller -> AuthServiceFE: 400 Bad Request
+else Đăng nhập thành công
+    Service -> Repo: findByUsernameOrEmail(...)
+    
+    alt Tài khoản bị Block
+        Service -> Controller: throw AppException("Account blocked")
+        Controller -> AuthServiceFE: 400 Bad Request
+    else Tài khoản hợp lệ
+        Service -> Jwt: generateToken(username, id)
+        
+        Service -> Controller: Success Response (AuthResponse)
+        deactivate Service
+
+        Controller -> AuthServiceFE: 200 OK (ApiResponse)
+        deactivate Controller
+
+        AuthServiceFE -> FE: Lưu Token & User (AsyncStorage)
+        FE -> User: Thành công & Chuyển hướng Home
+    end
+end
+
+@enduml

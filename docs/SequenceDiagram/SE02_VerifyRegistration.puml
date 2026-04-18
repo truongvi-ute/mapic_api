@@ -1,0 +1,54 @@
+@startuml
+autonumber
+skinparam Style strictuml
+
+actor "Người dùng" as User
+participant "VerifyOTPScreen" as FE
+participant "AuthService (FE)" as AuthServiceFE
+participant "AuthController" as Controller
+participant "AuthService (BE)" as Service
+participant "OtpService" as OtpSvc
+participant "UserRepository" as Repo
+participant "JwtUtil" as Jwt
+
+User -> FE: Nhập mã OTP
+FE -> AuthServiceFE: verifyRegistration(email, code)
+
+AuthServiceFE -> Controller: POST /api/auth/verify-registration (DTO)
+activate Controller
+
+Controller -> Service: verifyRegistration(DTO)
+activate Service
+
+Service -> OtpSvc: validateOtp(email, code, REGISTRATION)
+alt OTP không hợp lệ/hết hạn
+    Service -> Controller: throw AppException("Invalid OTP")
+    Controller -> AuthServiceFE: 400 Bad Request (Error Response)
+    AuthServiceFE -> FE: Hiển thị lỗi
+else OTP hợp lệ
+    Service -> OtpSvc: getPendingRegistration(email)
+    
+    Service -> Repo: saveAndFlush(User)
+    activate Repo
+    Repo --> Service: savedUser
+    deactivate Repo
+    
+    par
+        Service -> OtpSvc: deleteOtp(...)
+    else
+        Service -> OtpSvc: deletePendingRegistration(...)
+    end
+    
+    Service -> Jwt: generateToken(username, id)
+    
+    Service -> Controller: Success Response (AuthResponse)
+    deactivate Service
+
+    Controller -> AuthServiceFE: 200 OK (ApiResponse)
+    deactivate Controller
+
+    AuthServiceFE -> FE: Lưu Token & User (AsyncStorage)
+    FE -> User: Thành công & Chuyển hướng Home
+end
+
+@enduml

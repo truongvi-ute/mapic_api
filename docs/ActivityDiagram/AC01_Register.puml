@@ -1,0 +1,31 @@
+@startuml
+start
+:Người dùng nhập thông tin đăng ký;
+note right
+  - Username
+  - Tên
+  - Email
+  - Mật khẩu
+  - Xác nhận mật khẩu
+end note
+
+if (Thông tin hợp lệ?) then (Hợp lệ)
+  :Hệ thống kiểm tra sự tồn tại của Email/Username trong DB;
+  if (Đã tồn tại trong DB?) then (Có)
+    :Thông báo lỗi "Tên tài khoản/ Email đã tồn tại";
+    stop
+  else (Không)
+    :Hệ thống mã hóa mật khẩu;
+    :Lưu thông tin đăng ký và mã OTP vào **Cache Redis** (TTL 5-15p);
+    :Gửi mã OTP qua Email;
+    :Hiển thị màn hình nhập OTP;
+    partition "AC02: Xác thực OTP" {
+      :Thực hiện xác thực OTP;
+    }
+    stop
+  endif
+else (Không hợp lệ)
+  :Thông báo lỗi định dạng/mật khẩu không khớp;
+  stop
+endif
+@enduml

@@ -1,0 +1,30 @@
+@startuml
+skinparam actorStyle awesome
+left to right direction
+
+actor "Người Dùng" as User
+
+package "Hệ thống MAPIC" {
+    usecase "UC05: Đăng nhập" as UC05
+    usecase "UC02: Xác thực OTP" as UC_Verify
+}
+
+User --> UC05
+
+' Nếu tài khoản chưa xác thực (INACTIVE), yêu cầu UC02
+UC05 ..> UC_Verify : <<include (nếu chưa verify)>>
+
+note bottom of UC05
+  **Dữ liệu đầu vào:**
+  - Username (Tên tài khoản) HOẶC Email
+  - Mật khẩu
+  
+  **Điều kiện:**
+  - Tài khoản đã được tạo và không bị khóa/block.
+  - Sau 5 lần nhập sai mật khẩu, hệ thống khóa đăng nhập 30 phút.
+  
+  **Kết quả:**
+  - Cấp JWT Token truy cập hệ thống.
+end note
+
+@enduml

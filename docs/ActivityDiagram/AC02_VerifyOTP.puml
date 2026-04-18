@@ -1,0 +1,24 @@
+@startuml
+start
+:Nhận mã OTP qua Email;
+:Hiển thị màn hình nhập OTP;
+
+repeat
+  :Người dùng nhập mã OTP;
+  if (Kiểm tra mã trong **Cache Redis**?) then (Hợp lệ)
+    :Lấy dữ liệu đăng ký từ **Cache Redis**;
+    :Lưu tài khoản mới vào **Database** (Trạng thái ACTIVE);
+    :Thông báo thành công;
+    :Chuyển hướng về trang Đăng nhập;
+    stop
+  else (Không hợp lệ)
+    :Thông báo lỗi (Sai mã/Hết hạn);
+    if (Mã hết hạn 5p?) then (Có)
+      :Yêu cầu gửi lại mã (AC03);
+      :Hệ thống gửi mã mới;
+    else (Không)
+    endif
+  endif
+repeat while (Xác thực thành công?) is (Chưa)
+stop
+@enduml

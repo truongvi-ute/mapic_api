@@ -1,0 +1,46 @@
+@startuml
+autonumber
+skinparam Style strictuml
+
+actor "Người dùng" as User
+participant "VerifyOTPScreen" as FE
+participant "AuthService (FE)" as AuthServiceFE
+participant "AuthController" as Controller
+participant "AuthService (BE)" as Service
+participant "OtpService" as OtpSvc
+participant "UserRepository" as Repo
+participant "EmailService" as Email
+
+User -> FE: Nhấn "Gửi lại mã"
+FE -> AuthServiceFE: resendOtp(email, type)
+
+AuthServiceFE -> Controller: POST /api/auth/resend-otp (DTO)
+activate Controller
+
+Controller -> Service: resendOtp(DTO)
+activate Service
+
+alt type == REGISTRATION
+    Service -> OtpSvc: getPendingRegistration(email)
+else type == FORGOT_PASSWORD
+    Service -> Repo: existsByEmail(email)
+end
+
+alt Thông tin không hợp lệ
+    Service -> Controller: throw AppException("Expired/Not found")
+    Controller -> AuthServiceFE: 400 Bad Request
+else Tài khoản hợp lệ
+    Service -> OtpSvc: generateAndStoreOtp(email, type)
+    Service -> Email: sendOtpEmail(email, otp)
+    
+    Service -> Controller: Success Response
+    deactivate Service
+
+    Controller -> AuthServiceFE: 200 OK
+    deactivate Controller
+
+    AuthServiceFE -> FE: Cập nhật giao diện
+    FE -> User: Thông báo đã gửi mã mới
+end
+
+@enduml

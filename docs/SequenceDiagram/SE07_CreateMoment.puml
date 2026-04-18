@@ -1,0 +1,64 @@
+@startuml
+autonumber
+skinparam Style strictuml
+
+actor "Người dùng" as User
+participant "CreateMomentScreen" as FE
+participant "MomentController" as Controller
+participant "MomentService" as Service
+participant "GoongService" as Goong
+participant "StorageService" as Storage
+participant "MomentRepository" as MomentRepo
+participant "MomentMediaRepository" as MediaRepo
+
+User -> FE: Chọn Media, Nhập Caption & Danh mục
+alt Chế độ Chụp nhanh
+    FE -> FE: Lấy GPS (Lat, Lng)
+else Chế độ Thư viện
+    User -> FE: Chọn Tỉnh -> Huyện -> Xã
+end
+
+User -> FE: Nhấn "Đăng"
+FE -> Controller: POST /api/moments (Multipart: files, JSON metadata)
+activate Controller
+
+Controller -> Service: createMoment(userId, files, metadata)
+activate Service
+
+loop Mỗi file media
+    Service -> Storage: store(file)
+    activate Storage
+    Storage --> Service: filename, type
+    deactivate Storage
+end
+
+alt Metadata có Lat/Lng (Chụp nhanh)
+    Service -> Goong: reverseGeocode(lat, lng)
+    activate Goong
+    Goong --> Service: AddressComponents (Xã, Huyện, Tỉnh names)
+    deactivate Goong
+    Service -> Service: So khớp names với DB để lấy IDs
+else Metadata có CommuneId (Thư viện)
+    Service -> Service: Sử dụng các IDs địa giới hành chính đã chọn
+end
+
+Service -> MomentRepo: save(moment)
+activate MomentRepo
+MomentRepo --> Service: savedMoment
+deactivate MomentRepo
+
+loop Mỗi media URL
+    Service -> MediaRepo: save(momentMedia)
+    activate MediaRepo
+    MediaRepo --> Service: OK
+    deactivate MediaRepo
+end
+
+Service -> Controller: Success Message (MomentResponse)
+deactivate Service
+
+Controller -> FE: 201 Created (ApiResponse)
+deactivate Controller
+
+FE -> User: Thông báo đăng khoảnh khắc thành công
+@enduml

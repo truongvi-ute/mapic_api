@@ -1,0 +1,27 @@
+@startuml UC07_CreateMoment
+left to right direction
+actor "Người dùng" as User
+
+package "Hệ thống MAPIC" {
+    usecase "UC07: Đăng khoảnh khắc" as UC07
+    usecase "Chụp ảnh/Quay video" as UC_Capture
+    usecase "Chọn từ thư viện" as UC_Gallery
+    usecase "Lấy vị trí GPS" as UC_GPS
+    usecase "Chọn địa phận (3 cấp)" as UC_Region
+    usecase "Nhập mô tả & hashtag" as UC_Details
+    usecase "Xử lý tải lên Media" as UC_Upload
+}
+
+User --> UC07
+
+UC07 ..> UC_Details : <<include>>
+UC07 ..> UC_Upload : <<include>>
+
+UC07 <.. UC_Capture : <<extend>>
+UC07 <.. UC_Gallery : <<extend>>
+UC07 <.. UC_GPS : <<extend>>
+UC07 <.. UC_Region : <<extend>>
+
+note right of UC_Capture : Sử dụng khi chọn\nchế độ Chụp nhanh
+note right of UC_Gallery : Sử dụng khi chọn\nđăng từ thư viện
+@enduml

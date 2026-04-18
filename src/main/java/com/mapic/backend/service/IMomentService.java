@@ -1,0 +1,13 @@
+package com.mapic.backend.service;
+
+import com.mapic.backend.dto.request.CreateMomentRequest;
+import com.mapic.backend.entity.Moment;
+import com.mapic.backend.entity.User;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+
+public interface IMomentService {
+    Moment createMoment(User author, List<MultipartFile> files, CreateMomentRequest request);
+    List<Moment> getMomentsByAuthor(Long authorId);
+}

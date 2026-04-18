@@ -1,0 +1,33 @@
+@startuml
+start
+:Người dùng nhập Username/Email và Mật khẩu;
+
+if (Thông tin hợp lệ (định dạng)?) then (Có)
+  :Hệ thống truy vấn tài khoản (bằng Username hoặc Email);
+  if (Tài khoản tồn tại trong DB?) then (Có)
+    if (Tài khoản bị block bởi Admin?) then (Bị block)
+      :Thông báo "Tài khoản bị khóa, liên hệ Admin";
+      stop
+    else (Không block)
+      ' Đã loại bỏ logic lockout 30p theo yêu cầu đơn giản hóa
+      if (Mật khẩu khớp?) then (Khớp)
+        :Xóa số lần thử sai;
+        :Cấp JWT Token;
+        :Chuyển hướng về Trang chủ;
+        stop
+      else (Sai mật khẩu)
+        :Tăng số lần thử sai;
+        :Thông báo "Mật khẩu không chính xác";
+        stop
+      endif
+    endif
+  else (Không tồn tại)
+    :Thông báo "Tài khoản không tồn tại";
+    stop
+  endif
+else (Không hợp lệ)
+  :Thông báo lỗi định dạng;
+  stop
+endif
+
+@enduml

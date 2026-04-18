@@ -1,0 +1,35 @@
+@startuml
+skinparam actorStyle awesome
+left to right direction
+
+actor "Người Dùng" as User
+actor "Hệ thống Email" as EmailService <<System>>
+
+package "Hệ thống MAPIC" {
+    usecase "UC02: Xác thực OTP" as UC02
+    usecase "UC03: Gửi lại mã OTP" as UC03
+}
+
+User --> UC02
+UC02 ..> UC03 : <<extend>>
+UC02 -- EmailService
+
+note bottom of UC02
+  **Điều kiện tiên quyết:**
+  - Người dùng đã thực hiện UC01 (Gửi thông tin đăng ký)
+  - Hệ thống đã lưu thông tin tạm thời và mã OTP vào Cache Redis
+  - Hệ thống đã gửi mã OTP vào Email người dùng
+  
+  **Luồng sự kiện chính:**
+  1. Người dùng nhập mã OTP từ email.
+  2. Hệ thống kiểm tra tính hợp lệ của mã từ Redis.
+  3. Hệ thống lấy dữ liệu đăng ký từ Cache Redis.
+  4. Hệ thống tạo tài khoản mới vào Database (ACTIVE).
+  5. Hệ thống cấp JWT Token và hoàn tất đăng ký.
+  
+  **Ngoại lệ:**
+  - Mã không chính xác/hết hạn -> Báo lỗi, yêu cầu nhập lại hoặc gửi lại mã (UC03).
+  - Dữ liệu trong Redis hết hạn -> Yêu cầu đăng ký lại từ đầu (UC01).
+end note
+
+@enduml

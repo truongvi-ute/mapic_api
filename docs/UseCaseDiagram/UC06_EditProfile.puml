@@ -1,0 +1,35 @@
+@startuml
+skinparam actorStyle awesome
+left to right direction
+
+actor "Người Dùng" as User
+
+package "Hệ thống MAPIC" {
+    usecase "UC06: Chỉnh sửa Profile" as UC06
+    usecase "Cập nhật Ảnh đại diện" as UC_Avatar
+    usecase "Cập nhật Ảnh bìa" as UC_Background
+    usecase "Cập nhật Thông tin cá nhân" as UC_Info
+}
+
+User --> UC06
+UC_Avatar .up.> UC06 : <<extend>>
+UC_Background .up.> UC06 : <<extend>>
+UC_Info .up.> UC06 : <<extend>>
+
+note bottom of UC06
+  **Mô tả:**
+  Cho phép người dùng thay đổi các thông tin hiển thị và cá nhân tùy chọn.
+  
+  **Dữ liệu đầu vào:**
+  - Ảnh đại diện, Ảnh bìa (file hình ảnh).
+  - Tên hiển thị (Name), Tiểu sử (Bio), Ngày sinh (DOB), Số điện thoại (Phone).
+  
+  **Điều kiện:**
+  - Người dùng đã đăng nhập thành công.
+  
+  **Luồng chính:**
+  1. Người dùng truy cập trang Profile hoặc Settings.
+  2. Người dùng có thể chọn cập nhật ảnh hoặc các thông tin văn bản.
+  3. Hệ thống lưu trữ các thay đổi tương ứng vào thực thể User và UserProfile.
+end note
+@enduml

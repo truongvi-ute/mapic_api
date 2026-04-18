@@ -1,0 +1,30 @@
+@startuml
+start
+:Người dùng chọn "Chỉnh sửa Profile";
+fork
+    :Chọn cập nhật Ảnh đại diện/Ảnh bìa;
+    :Chọn ảnh từ thư viện hoặc chụp ảnh;
+    :Hệ thống upload file lên server;
+    if (Upload thành công?) then (Có)
+        :Cập nhật avatarUrl/coverImageUrl trong UserProfile;
+    else (Không)
+        :Hiển thị lỗi upload;
+        stop
+    endif
+fork again
+    :Chọn "Chỉnh sửa thông tin cá nhân";
+    :Nhập Name, Bio, DOB, Phone;
+    if (Dữ liệu hợp lệ?) then (Có)
+        :Cập nhật Name, Phone trong User;
+        :Cập nhật Bio, DOB trong UserProfile;
+    else (Không)
+        :Hiển thị lỗi validation;
+        stop
+    endif
+end fork
+:Lưu tất cả thay đổi vào Database;
+:Hệ thống trả về thông báo thành công;
+:Cập nhật thông tin cục bộ (AsyncStorage/State);
+:Hiển thị thông tin mới trên Profile;
+stop
+@enduml

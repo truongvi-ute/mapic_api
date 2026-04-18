@@ -1,0 +1,50 @@
+@startuml AC07_CreateMoment
+start
+:Người dùng chọn "Tạo khoảnh khắc";
+
+if (Chọn chế độ?) then (Chụp nhanh)
+  repeat
+    :Mở Camera;
+    :Chụp ảnh hoặc Quay phim;
+    :Thêm vào danh sách Media;
+  backward:Người dùng muốn chụp thêm;
+  repeat while (Tiếp tục chụp?) is (Có)
+  
+  :Hệ thống lấy vị trí GPS hiện tại;
+  :Hiển thị địa chỉ (Reverse Geocode);
+else (Đăng từ thư viện)
+  repeat
+    :Mở Thư viện;
+    :Chọn ảnh hoặc video;
+    :Thêm vào danh sách Media;
+  backward:Người dùng muốn chọn thêm;
+  repeat while (Tiếp tục chọn?) is (Có)
+  
+  :Chọn Tỉnh;
+  :Chọn Huyện;
+  :Chọn Xã;
+endif
+
+:Nhập nội dung mô tả;
+:Chọn danh mục (Phong cảnh, Con người...);
+:Chọn trạng thái hiển thị (Công khai/Bạn bè);
+
+:Nhấn "Đăng";
+
+partition "Hệ thống Backend" {
+  :Tải lên và lưu trữ danh sách Media;
+  :Tạo bản ghi Moment;
+  :Tạo các bản ghi MomentMedia tương ứng;
+  :Liên kết với Vị trí/Địa phận;
+}
+
+if (Thành công?) then (Có)
+  :Hiển thị thông báo thành công;
+  :Chuyển về trang chủ/profile;
+else (Không)
+  :Hiển thị lỗi;
+  :Cho phép thử lại;
+endif
+
+stop
+@enduml

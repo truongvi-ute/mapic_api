@@ -1,0 +1,30 @@
+@startuml
+skinparam actorStyle awesome
+left to right direction
+
+actor "Người Dùng" as User
+actor "Hệ thống Email" as EmailService <<System>>
+
+package "Hệ thống MAPIC" {
+    usecase "UC03: Gửi lại mã OTP" as UC03
+}
+
+User --> UC03
+UC03 -- EmailService
+
+note bottom of UC03
+  **Luồng chính:**
+  1. Người dùng chọn chức năng "Gửi lại mã" khi chưa nhận được hoặc mã cũ hết hạn.
+  2. Hệ thống kiểm tra điều kiện Rate Limit:
+     - Không quá 3 mã trong 15 phút.
+     - Không nằm trong thời gian bị khóa 30 phút (do nhập sai quá 5 lần - UC02).
+  3. Hệ thống vô hiệu hóa (Invalidate) tất cả mã OTP cũ của người dùng này.
+  4. Hệ thống tạo mã OTP 6 số mới.
+  5. Hệ thống gửi mã qua Email cho người dùng.
+  
+  **Ngoại lệ:**
+  - Vượt quá giới hạn gửi hoặc đang bị khóa (Rate Limit / Lockout) -> Báo lỗi: "Thử lại sau 15-30 phút".
+  - Người dùng không tồn tại hoặc đã xác thực -> Báo lỗi tương ứng.
+end note
+
+@enduml

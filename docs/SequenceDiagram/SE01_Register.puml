@@ -1,0 +1,53 @@
+@startuml
+autonumber
+skinparam Style strictuml
+
+actor "Người dùng" as User
+participant "RegisterScreen" as FE
+participant "AuthService (FE)" as AuthServiceFE
+participant "AuthController" as Controller
+participant "AuthService (BE)" as Service
+participant "UserRepository" as Repo
+participant "OtpService" as OtpSvc
+participant "EmailService" as Email
+
+User -> FE: Nhập (username, name, email, password)
+FE -> FE: Tự validate (format email, độ dài pass)
+
+FE -> AuthServiceFE: register(registerData)
+note right: Chuyển data thành RegisterRequestDTO
+
+AuthServiceFE -> Controller: POST /api/auth/register (DTO)
+activate Controller
+
+Controller -> Service: register(DTO)
+activate Service
+
+Service -> Repo: existsByUsername(DTO.username)
+Service -> Repo: existsByEmail(DTO.email)
+
+alt Email/Username đã tồn tại
+    Service -> Controller: throw AlreadyExistsException
+    Controller -> AuthServiceFE: 400 Bad Request (Error Response)
+    AuthServiceFE -> FE: Hiển thị lỗi cho người dùng
+else Thông tin hợp lệ
+    Service -> Service: Hash password (BCrypt)
+
+    par
+        Service -> OtpSvc: savePendingRegistration(email, DTO)
+    else
+        Service -> OtpSvc: generateAndStoreOtp(email)
+    end
+
+    Service -> Email: sendOtpEmail(email, otp)
+
+    Service -> Controller: Success Response ("OTP sent")
+    deactivate Service
+
+    Controller -> AuthServiceFE: 200 OK (ApiResponse)
+    deactivate Controller
+
+    AuthServiceFE -> FE: Trả về kết quả thành công
+    FE -> User: Chuyển hướng sang trang Verify OTP
+end
+@enduml

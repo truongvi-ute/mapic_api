@@ -1,0 +1,18 @@
+@startuml
+start
+:Yêu cầu gửi lại mã OTP;
+
+' Bỏ logic rate limit phức tạp để tối giản theo yêu cầu
+:Hệ thống kiểm tra thông tin trong **Cache Redis**;
+if (Còn tồn tại dữ liệu đăng ký?) then (Có)
+  :Hệ thống vô hiệu hóa (Invalidate) mã OTP cũ trong Redis;
+  :Tạo mã mã OTP mới và lưu vào **Cache Redis**;
+  :Hệ thống gửi mã qua Email;
+  :Thông báo "Mã OTP mới đã được gửi thành công";
+  stop
+else (Không/Hết hạn)
+  :Thông báo "Yêu cầu đã hết hạn, vui lòng đăng ký lại";
+  :Chuyển hướng về trang Đăng ký;
+  stop
+endif
+@enduml

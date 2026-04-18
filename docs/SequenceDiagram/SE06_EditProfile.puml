@@ -1,0 +1,71 @@
+    @startuml
+autonumber
+skinparam Style strictuml
+
+actor "Người dùng" as User
+participant "ProfileScreen / EditProfileScreen" as FE
+participant "UserController" as Controller
+participant "UserService" as Service
+participant "StorageService" as Storage
+participant "UserRepository" as Repo
+
+== Cập nhật Thông tin cá nhân (Text) ==
+
+User -> FE: Nhập Name, Bio, DOB, Phone & Lưu
+FE -> Controller: PUT /api/user/update-profile (DTO)
+activate Controller
+
+Controller -> Service: updateProfile(userId, DTO)
+activate Service
+
+Service -> Repo: findById(userId)
+activate Repo
+Repo --> Service: user
+deactivate Repo
+
+Service -> Service: Cập nhật User (Name, Phone)
+Service -> Service: Cập nhật UserProfile (Bio, DOB, Gender)
+
+Service -> Repo: save(user)
+activate Repo
+Repo --> Service: savedUser
+deactivate Repo
+
+Service -> Controller: Success Message
+deactivate Service
+
+Controller -> FE: 200 OK (ApiResponse)
+deactivate Controller
+
+FE -> User: Thông báo cập nhật thành công
+
+== Cập nhật Ảnh đại diện / Ảnh bìa ==
+
+User -> FE: Chọn ảnh từ thư viện
+FE -> Controller: POST /api/user/upload-avatar (MultipartFile)
+activate Controller
+
+Controller -> Service: uploadAvatar(userId, file)
+activate Service
+
+Service -> Storage: store(file)
+activate Storage
+Storage -> Storage: Kiểm tra định dạng & Kích thước
+Storage -> Storage: Lưu file vào thư mục /uploads
+Storage --> Service: filename
+deactivate Storage
+
+Service -> Repo: findById(userId)
+Service -> Service: Xóa file cũ (nếu có)
+Service -> Service: Cập nhật avatarUrl trong UserProfile
+
+Service -> Repo: save(user)
+Service -> Controller: Success (avatarUrl)
+deactivate Service
+
+Controller -> FE: 200 OK (ApiResponse)
+deactivate Controller
+
+FE -> User: Hiển thị Avatar mới
+
+@enduml

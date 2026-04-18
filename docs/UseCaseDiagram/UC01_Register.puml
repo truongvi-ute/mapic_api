@@ -1,0 +1,34 @@
+@startuml
+skinparam actorStyle awesome
+left to right direction
+
+actor "Người Dùng" as User
+actor "Hệ thống Email" as EmailService <<System>>
+
+package "Hệ thống MAPIC" {
+    usecase "UC01: Đăng ký tài khoản" as UC01
+    usecase "UC02: Xác thực OTP" as UC_Verify
+    usecase "UC02: Xác thực OTP" as UC_Verify
+}
+
+User --> UC01
+
+' Luồng đăng ký bắt buộc phải có xác thực
+UC01 ..> UC_Verify : <<include>>
+
+' Tương tác với hệ thống bên ngoài
+UC_Verify -- EmailService
+
+note bottom of UC01
+  **Dữ liệu đầu vào:**
+  - Username, Tên, Email, Mật khẩu, Xác nhận mật khẩu
+  **Điều kiện:**
+  - Email, Username chưa tồn tại trong hệ thống, mật khẩu và xác nhận mật khẩu khớp
+end note
+
+note bottom of UC_Verify
+  **Hành động:**
+  - Hệ thống tạo mã 6 số, hiệu lực trong 5p
+  - Khớp mã người dùng nhập
+end note
+@enduml
