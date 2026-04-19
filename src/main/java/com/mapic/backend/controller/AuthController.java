@@ -48,4 +48,21 @@ public class AuthController {
     public ResponseEntity<ApiResponse<String>> changePassword(@Valid @RequestBody ForgotPasswordRequest request) {
         return ResponseEntity.ok(authService.changePassword(request));
     }
+
+
+    @GetMapping("/verify-token")
+    public ResponseEntity<ApiResponse<AuthResponse>> verifyToken(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest().body(
+                ApiResponse.<AuthResponse>builder()
+                    .success(false)
+                    .message("Missing or invalid Authorization header")
+                    .build()
+            );
+        }
+
+        String token = authHeader.substring(7);
+        return ResponseEntity.ok(authService.verifyToken(token));
+    }
+
 }

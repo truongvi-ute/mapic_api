@@ -5,6 +5,9 @@ import com.mapic.backend.entity.*;
 import com.mapic.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,44 +35,41 @@ public class MomentServiceImpl implements IMomentService {
 
         // 1. Resolve Location
         Location location = null;
-        Province province = null;
-        District district = null;
-        Commune commune = null;
 
         if (request.getLatitude() != null && request.getLongitude() != null) {
-            // Mode 1: GPS Capture
+            // Lưu location với latitude, longitude và address
             location = locationRepository.save(Location.builder()
                     .latitude(request.getLatitude())
                     .longitude(request.getLongitude())
                     .address(request.getAddressName())
-                    .name("GPS Location")
+                    .name("User Location")
                     .build());
-
-            // Use OpenCage to resolve administrative regions
-            var resolved = openCageService.resolveLocation(request.getLatitude(), request.getLongitude());
-            if (resolved != null) {
-                province = resolved.getProvince();
-                district = resolved.getDistrict();
-                commune = resolved.getCommune();
-                if (location.getAddress() == null) {
-                    location.setAddress(resolved.getAddress());
-                    location = locationRepository.save(location);
-                }
-            }
-        } else {
-            // Mode 2: Picker selection
-            if (request.getProvinceId() != null) {
-                province = provinceRepository.findById(request.getProvinceId()).orElse(null);
-            }
-            if (request.getDistrictId() != null) {
-                district = districtRepository.findById(request.getDistrictId()).orElse(null);
-            }
-            if (request.getCommuneId() != null) {
-                commune = communeRepository.findById(request.getCommuneId()).orElse(null);
-            }
+            
+            log.info("Saved location: lat={}, lng={}, address={}", 
+                request.getLatitude(), request.getLongitude(), request.getAddressName());
         }
 
-        // 2. Create Moment
+        // 2. Resolve Province, District, Commune
+        Province province = null;
+        District district = null;
+        Commune commune = null;
+
+        if (request.getProvinceId() != null) {
+            province = provinceRepository.findById(request.getProvinceId()).orElse(null);
+            log.info("Found province: {}", province != null ? province.getName() : "null");
+        }
+
+        if (request.getDistrictId() != null) {
+            district = districtRepository.findById(request.getDistrictId()).orElse(null);
+            log.info("Found district: {}", district != null ? district.getName() : "null");
+        }
+
+        if (request.getCommuneId() != null) {
+            commune = communeRepository.findById(request.getCommuneId()).orElse(null);
+            log.info("Found commune: {}", commune != null ? commune.getName() : "null");
+        }
+
+        // 3. Create Moment
         Moment moment = Moment.builder()
                 .author(author)
                 .content(request.getCaption())
@@ -83,8 +83,9 @@ public class MomentServiceImpl implements IMomentService {
                 .build();
 
         moment = momentRepository.save(moment);
+        log.info("Created moment with id: {}", moment.getId());
 
-        // 3. Save Media
+        // 4. Save Media
         if (files != null && !files.isEmpty()) {
             int sortOrder = 0;
             for (MultipartFile file : files) {
@@ -100,6 +101,7 @@ public class MomentServiceImpl implements IMomentService {
                         .build();
                 
                 mediaRepository.save(media);
+                log.info("Saved media: {} (type: {})", filename, type);
             }
         }
 
@@ -109,5 +111,52 @@ public class MomentServiceImpl implements IMomentService {
     @Override
     public List<Moment> getMomentsByAuthor(Long authorId) {
         return momentRepository.findByAuthorId(authorId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Moment> getFeedMoments(Long userId, Pageable pageable) {
+        log.info("Fetching feed moments for user: {} (page: {}, size: {})", 
+                userId, pageable.getPageNumber(), pageable.getPageSize());
+        
+        // Get paginated moments (without JOIN FETCH to avoid pagination issues)
+        Page<Moment> momentsPage = momentRepository.findFeedMoments(userId, pageable);
+        
+        // Manually fetch relationships for the current page to avoid N+1 queries
+        List<Moment> moments = momentsPage.getContent();
+        if (!moments.isEmpty()) {
+            // Force load lazy relationships
+            moments.forEach(moment -> {
+                // Load author and profile
+                moment.getAuthor().getName();
+                if (moment.getAuthor().getUserProfile() != null) {
+                    moment.getAuthor().getUserProfile().getAvatarUrl();
+                }
+                
+                // Load location
+                if (moment.getLocation() != null) {
+                    moment.getLocation().getAddress();
+                }
+                
+                // Load province, district, commune
+                if (moment.getProvince() != null) {
+                    moment.getProvince().getName();
+                }
+                if (moment.getDistrict() != null) {
+                    moment.getDistrict().getName();
+                }
+                if (moment.getCommune() != null) {
+                    moment.getCommune().getName();
+                }
+                
+                // Load media
+                if (moment.getMedia() != null) {
+                    moment.getMedia().size();
+                }
+            });
+        }
+        
+        log.info("Fetched {} moments for feed", moments.size());
+        return momentsPage;
     }
 }

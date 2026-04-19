@@ -10,4 +10,5 @@ public interface IAuthService {
     ApiResponse<String> forgotPassword(ForgotPasswordRequest request);
     ApiResponse<String> resetPassword(ResetPasswordRequest request);
     ApiResponse<String> changePassword(ForgotPasswordRequest request);
+    ApiResponse<AuthResponse> verifyToken(String token);
 }

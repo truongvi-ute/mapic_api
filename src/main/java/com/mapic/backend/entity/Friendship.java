@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "friendships", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"user_id", "friend_id"})
+    @UniqueConstraint(columnNames = {"user_id_1", "user_id_2"})
 })
 @Data
 @NoArgsConstructor
@@ -18,26 +18,18 @@ public class Friendship {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @JoinColumn(name = "user_id_1", nullable = false)
+    private User user1;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "friend_id", nullable = false)
-    private User friend;
+    @JoinColumn(name = "user_id_2", nullable = false)
+    private User user2;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private FriendshipStatus status;
-
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime requestedAt;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "updated_by_id")
-    private User updatedBy;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
-        requestedAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now();
     }
 }

@@ -5,6 +5,7 @@ import com.mapic.backend.exception.AppException;
 import com.mapic.backend.entity.AccountStatus;
 import com.mapic.backend.entity.OtpType;
 import com.mapic.backend.entity.User;
+import com.mapic.backend.entity.UserProfile;
 import com.mapic.backend.repository.UserRepository;
 import com.mapic.backend.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -209,4 +210,40 @@ public class AuthServiceImpl implements IAuthService {
         emailService.sendOtpEmail(email, otp);
         return ApiResponse.success("OTP sent to your email", null);
     }
+
+
+    @Override
+    public ApiResponse<AuthResponse> verifyToken(String token) {
+        try {
+            // 1. Extract username từ token
+            String username = jwtUtil.extractUsername(token);
+
+            // 2. Tìm user trong database
+            User user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new AppException("User not found"));
+
+            // 3. Validate token với username
+            if (!jwtUtil.validateToken(token, username)) {
+                throw new AppException("Invalid or expired token");
+            }
+
+            // 4. Kiểm tra account status
+            if (user.getStatus() == AccountStatus.BLOCK) {
+                throw new AppException("Account is blocked");
+            }
+
+            // 5. Trả về thông tin cơ bản để xác thực
+            AuthResponse response = AuthResponse.builder()
+                    .token(token)
+                    .id(user.getId())
+                    .username(user.getUsername())
+                    .email(user.getEmail())
+                    .build();
+
+            return ApiResponse.success("Token is valid", response);
+        } catch (Exception e) {
+            throw new AppException("Invalid token: " + e.getMessage());
+        }
+    }
+
 }

@@ -1,0 +1,125 @@
+@startuml SE08_AddFriend
+actor "Người dùng" as User
+participant "UI: FriendSearchScreen" as UI
+participant "FriendController" as Controller
+participant "FriendService" as Service
+participant "UserRepository" as UserRepo
+participant "FriendRequestRepository" as FriendRepo
+participant "NotificationService" as Notification
+database "Database" as DB
+
+== Tìm kiếm người dùng (Search hoặc QR) ==
+
+User -> UI: Nhập tên hoặc quét QR
+activate UI
+
+alt Tìm kiếm theo tên
+    UI -> Controller: GET /api/friends/search?query={name}
+    activate Controller
+    Controller -> Service: searchUsers(query)
+    activate Service
+    Service -> UserRepo: findByNameOrUsernameContaining(query)
+    activate UserRepo
+    UserRepo -> DB: SELECT * FROM users WHERE name LIKE '%query%'
+    DB --> UserRepo: List<User>
+    UserRepo --> Service: List<User>
+    deactivate UserRepo
+    Service --> Controller: List<UserSearchResponse>
+    deactivate Service
+    Controller --> UI: 200 OK + List<UserSearchResponse>
+    deactivate Controller
+    
+else Quét mã QR
+    UI -> UI: Quét QR code
+    UI -> UI: Giải mã QR lấy userId
+    UI -> Controller: GET /api/friends/user/{userId}
+    activate Controller
+    Controller -> Service: getUserById(userId)
+    activate Service
+    Service -> UserRepo: findById(userId)
+    activate UserRepo
+    UserRepo -> DB: SELECT * FROM users WHERE id = userId
+    DB --> UserRepo: User
+    UserRepo --> Service: User
+    deactivate UserRepo
+    Service --> Controller: UserSearchResponse
+    deactivate Service
+    Controller --> UI: 200 OK + UserSearchResponse
+    deactivate Controller
+end
+
+UI --> User: Hiển thị danh sách người dùng
+deactivate UI
+
+== Kiểm tra trạng thái quan hệ ==
+
+User -> UI: Chọn một người dùng
+activate UI
+UI -> Controller: GET /api/friends/status/{targetUserId}
+activate Controller
+Controller -> Service: getFriendshipStatus(currentUserId, targetUserId)
+activate Service
+Service -> FriendRepo: findFriendshipStatus(userId1, userId2)
+activate FriendRepo
+FriendRepo -> DB: SELECT * FROM friend_requests\nWHERE (sender_id = ? AND receiver_id = ?)\nOR (sender_id = ? AND receiver_id = ?)
+DB --> FriendRepo: FriendRequest (if exists)
+FriendRepo --> Service: FriendshipStatus
+deactivate FriendRepo
+Service --> Controller: FriendshipStatusResponse
+deactivate Service
+Controller --> UI: 200 OK + Status
+deactivate Controller
+
+alt Đã là bạn bè
+    UI --> User: Hiển thị "Đã là bạn bè"
+else Đã gửi lời mời
+    UI --> User: Hiển thị "Đã gửi lời mời"
+else Đã nhận lời mời
+    UI --> User: Hiển thị "Chấp nhận lời mời"
+else Chưa có quan hệ
+    UI --> User: Hiển thị nút "Kết bạn"
+end
+deactivate UI
+
+== Gửi lời mời kết bạn ==
+
+User -> UI: Nhấn "Kết bạn"
+activate UI
+UI -> Controller: POST /api/friends/request\n{receiverId: targetUserId}
+activate Controller
+Controller -> Service: sendFriendRequest(senderId, receiverId)
+activate Service
+
+Service -> FriendRepo: existsByUsers(senderId, receiverId)
+activate FriendRepo
+FriendRepo -> DB: SELECT COUNT(*) FROM friend_requests\nWHERE (sender_id = ? AND receiver_id = ?)\nOR (sender_id = ? AND receiver_id = ?)
+DB --> FriendRepo: count
+FriendRepo --> Service: boolean
+deactivate FriendRepo
+
+alt Đã có lời mời
+    Service --> Controller: Error: "Lời mời đã tồn tại"
+    Controller --> UI: 400 Bad Request
+    UI --> User: "Đã gửi lời mời trước đó"
+else Chưa có lời mời
+    Service -> FriendRepo: save(FriendRequest)
+    activate FriendRepo
+    FriendRepo -> DB: INSERT INTO friend_requests\n(sender_id, receiver_id, status, created_at)
+    DB --> FriendRepo: FriendRequest
+    FriendRepo --> Service: FriendRequest
+    deactivate FriendRepo
+    
+    Service -> Notification: sendFriendRequestNotification(receiverId, senderName)
+    activate Notification
+    Notification --> Service: Success
+    deactivate Notification
+    
+    Service --> Controller: Success
+    deactivate Service
+    Controller --> UI: 200 OK + "Đã gửi lời mời"
+    deactivate Controller
+    UI --> User: "Đã gửi lời mời kết bạn"
+end
+deactivate UI
+
+@enduml

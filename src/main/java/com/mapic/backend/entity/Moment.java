@@ -3,6 +3,7 @@ package com.mapic.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "moments")
@@ -37,6 +38,9 @@ public class Moment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "commune_id")
     private Commune commune;
+
+    @OneToMany(mappedBy = "moment", fetch = FetchType.LAZY)
+    private List<MomentMedia> media;
 
     private String category;
     

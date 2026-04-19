@@ -1,0 +1,49 @@
+@startuml UC08_AddFriend
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Người dùng" as User
+
+rectangle "Hệ thống Mapic" {
+  usecase "UC08: Kết bạn" as UC08
+  usecase "Tìm kiếm bạn bè\n(theo tên)" as UC08_1
+  usecase "Quét mã QR" as UC08_2
+  usecase "Gửi lời mời kết bạn" as UC08_3
+  usecase "Xem danh sách\nlời mời đã gửi" as UC08_4
+  usecase "Xem danh sách\nlời mời nhận được" as UC08_5
+  usecase "Chấp nhận lời mời" as UC08_6
+  usecase "Từ chối lời mời" as UC08_7
+  usecase "Hủy lời mời đã gửi" as UC08_8
+  usecase "Xem danh sách bạn bè" as UC08_9
+  usecase "Hủy kết bạn" as UC08_10
+}
+
+User --> UC08
+
+UC08 ..> UC08_1 : <<include>>
+UC08 ..> UC08_2 : <<include>>
+UC08 ..> UC08_3 : <<include>>
+UC08 ..> UC08_4 : <<extend>>
+UC08 ..> UC08_5 : <<extend>>
+UC08 ..> UC08_6 : <<extend>>
+UC08 ..> UC08_7 : <<extend>>
+UC08 ..> UC08_8 : <<extend>>
+UC08 ..> UC08_9 : <<extend>>
+UC08 ..> UC08_10 : <<extend>>
+
+note right of UC08_1
+  Tìm kiếm người dùng
+  theo tên hoặc username
+end note
+
+note right of UC08_2
+  Quét mã QR của người dùng khác
+  để lấy thông tin và gửi lời mời
+end note
+
+note right of UC08_3
+  Gửi lời mời kết bạn
+  đến người dùng đã tìm thấy
+end note
+
+@enduml

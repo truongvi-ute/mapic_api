@@ -1,0 +1,75 @@
+@startuml AC08_AddFriend
+start
+
+:Người dùng mở màn hình\nTìm kiếm bạn bè;
+
+partition "Tìm kiếm người dùng" {
+  :Chọn phương thức tìm kiếm;
+  
+  if (Phương thức?) then (Tìm kiếm theo tên)
+    :Nhập tên hoặc username;
+    :Gọi API search user;
+    
+    if (Tìm thấy kết quả?) then (Có)
+      :Hiển thị danh sách\nngười dùng phù hợp;
+    else (Không)
+      :Hiển thị "Không tìm thấy\nngười dùng";
+      stop
+    endif
+    
+  else (Quét mã QR)
+    :Mở camera quét QR;
+    :Quét mã QR của người dùng;
+    
+    if (Quét thành công?) then (Có)
+      :Giải mã QR lấy userId;
+      :Gọi API get user by ID;
+      :Hiển thị thông tin người dùng;
+    else (Không)
+      :Hiển thị "Không thể quét mã QR";
+      stop
+    endif
+  endif
+}
+
+:Người dùng chọn một người\nđể gửi lời mời;
+
+partition "Kiểm tra trạng thái" {
+  if (Đã là bạn bè?) then (Có)
+    :Hiển thị "Đã là bạn bè";
+    stop
+  else (Không)
+    if (Đã gửi lời mời?) then (Có)
+      :Hiển thị "Đã gửi lời mời";
+      stop
+    else (Không)
+      if (Đã nhận lời mời?) then (Có)
+        :Hiển thị nút "Chấp nhận";
+        :Người dùng chấp nhận;
+        :Gọi API accept friend request;
+        :Cập nhật trạng thái thành bạn bè;
+        :Hiển thị "Đã kết bạn thành công";
+        stop
+      else (Không)
+        :Hiển thị nút "Kết bạn";
+      endif
+    endif
+  endif
+}
+
+partition "Gửi lời mời kết bạn" {
+  :Người dùng nhấn "Kết bạn";
+  :Gọi API send friend request;
+  
+  if (Gửi thành công?) then (Có)
+    :Lưu lời mời vào database;
+    :Gửi thông báo đến người nhận;
+    :Hiển thị "Đã gửi lời mời kết bạn";
+  else (Không)
+    :Hiển thị thông báo lỗi;
+  endif
+}
+
+stop
+
+@enduml
