@@ -2,9 +2,14 @@ package com.mapic.backend.service;
 
 import com.mapic.backend.dto.UpdateProfileRequest;
 import com.mapic.backend.dto.UserProfileResponse;
+import com.mapic.backend.dto.response.UserProfileWithFriendshipResponse;
+import com.mapic.backend.entity.FriendRequest;
 import com.mapic.backend.entity.User;
 import com.mapic.backend.entity.UserProfile;
 import com.mapic.backend.exception.AppException;
+import com.mapic.backend.exception.NotFoundException;
+import com.mapic.backend.repository.FriendRequestRepository;
+import com.mapic.backend.repository.FriendshipRepository;
 import com.mapic.backend.repository.UserProfileRepository;
 import com.mapic.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -12,12 +17,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements IUserService {
 
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
+    private final FriendshipRepository friendshipRepository;
+    private final FriendRequestRepository friendRequestRepository;
     private final IStorageService storageService;
 
     @Override
@@ -26,6 +36,56 @@ public class UserServiceImpl implements IUserService {
                 .orElseThrow(() -> new AppException("User not found"));
         
         return mapToResponse(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserProfileWithFriendshipResponse getUserProfileById(Long userId, Long currentUserId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+        
+        // Determine friendship status
+        UserProfileWithFriendshipResponse.FriendshipStatus friendshipStatus = 
+            determineFriendshipStatus(currentUserId, userId);
+        
+        UserProfile profile = user.getUserProfile();
+        
+        return UserProfileWithFriendshipResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .name(user.getName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .bio(profile != null ? profile.getBio() : null)
+                .avatarUrl(profile != null ? storageService.resolveUrl(profile.getAvatarUrl(), "avatars") : null)
+                .coverImageUrl(profile != null ? storageService.resolveUrl(profile.getCoverImageUrl(), "covers") : null)
+                .gender(profile != null ? profile.getGender() : null)
+                .dateOfBirth(profile != null ? profile.getDateOfBirth() : null)
+                .friendshipStatus(friendshipStatus)
+                .build();
+    }
+
+    private UserProfileWithFriendshipResponse.FriendshipStatus determineFriendshipStatus(Long currentUserId, Long targetUserId) {
+        // Check if they are friends
+        if (friendshipRepository.existsFriendshipBetweenUsers(currentUserId, targetUserId)) {
+            return UserProfileWithFriendshipResponse.FriendshipStatus.FRIENDS;
+        }
+        
+        // Check for pending friend requests
+        Optional<FriendRequest> pendingRequest = friendRequestRepository.findPendingRequestBetweenUsers(
+            currentUserId, targetUserId, LocalDateTime.now()
+        );
+        
+        if (pendingRequest.isPresent()) {
+            FriendRequest request = pendingRequest.get();
+            if (request.getSender().getId().equals(currentUserId)) {
+                return UserProfileWithFriendshipResponse.FriendshipStatus.PENDING_SENT;
+            } else {
+                return UserProfileWithFriendshipResponse.FriendshipStatus.PENDING_RECEIVED;
+            }
+        }
+        
+        return UserProfileWithFriendshipResponse.FriendshipStatus.NONE;
     }
 
     @Override

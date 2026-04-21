@@ -25,6 +25,20 @@ public interface MomentRepository extends JpaRepository<Moment, Long> {
            "ORDER BY m.createdAt DESC")
     List<Moment> findByAuthorId(@Param("authorId") Long authorId);
     
+    @Query("SELECT DISTINCT m FROM Moment m " +
+           "LEFT JOIN FETCH m.author a " +
+           "LEFT JOIN FETCH a.userProfile " +
+           "LEFT JOIN FETCH m.location " +
+           "LEFT JOIN FETCH m.province " +
+           "LEFT JOIN FETCH m.district " +
+           "LEFT JOIN FETCH m.commune " +
+           "LEFT JOIN FETCH m.media " +
+           "WHERE m.author.id = :authorId " +
+           "AND m.isPublic = true " +
+           "AND m.status = 'ACTIVE' " +
+           "ORDER BY m.createdAt DESC")
+    List<Moment> findPublicMomentsByAuthorId(@Param("authorId") Long authorId);
+    
     // Query for feed: public moments + private moments from friends
     @Query("SELECT m FROM Moment m " +
            "WHERE m.status = 'ACTIVE' " +

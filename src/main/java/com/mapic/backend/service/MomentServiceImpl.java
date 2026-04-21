@@ -25,6 +25,7 @@ public class MomentServiceImpl implements IMomentService {
     private final ProvinceRepository provinceRepository;
     private final DistrictRepository districtRepository;
     private final CommuneRepository communeRepository;
+    private final FriendshipRepository friendshipRepository;
     private final IStorageService storageService;
     private final OpenCageService openCageService;
 
@@ -111,6 +112,21 @@ public class MomentServiceImpl implements IMomentService {
     @Override
     public List<Moment> getMomentsByAuthor(Long authorId) {
         return momentRepository.findByAuthorId(authorId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Moment> getMomentsByUser(Long userId, Long currentUserId) {
+        // Check if they are friends
+        boolean areFriends = friendshipRepository.existsFriendshipBetweenUsers(currentUserId, userId);
+        
+        if (areFriends || userId.equals(currentUserId)) {
+            // Return all moments if friends or viewing own profile
+            return momentRepository.findByAuthorId(userId);
+        } else {
+            // Return only public moments if not friends
+            return momentRepository.findPublicMomentsByAuthorId(userId);
+        }
     }
 
     @Override

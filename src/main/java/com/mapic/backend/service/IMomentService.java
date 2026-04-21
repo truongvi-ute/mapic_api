@@ -12,6 +12,7 @@ import java.util.List;
 public interface IMomentService {
     Moment createMoment(User author, List<MultipartFile> files, CreateMomentRequest request);
     List<Moment> getMomentsByAuthor(Long authorId);
+    List<Moment> getMomentsByUser(Long userId, Long currentUserId);
     Page<Moment> getFeedMoments(Long userId, Pageable pageable);
     Page<Moment> exploreMoments(String provinceId, String category, String sort, Pageable pageable);
 }

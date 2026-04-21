@@ -76,6 +76,22 @@ public class MomentController {
         return ResponseEntity.ok(ApiResponse.success("Fetched my moments", responses));
     }
 
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<ApiResponse<List<MomentResponse>>> getUserMoments(@PathVariable Long userId) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        log.info("Fetching moments for user: {} by current user: {}", userId, currentUser.getId());
+
+        List<Moment> moments = momentService.getMomentsByUser(userId, currentUser.getId());
+        List<MomentResponse> responses = moments.stream()
+                .map(MomentResponse::fromEntity)
+                .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(ApiResponse.success("Fetched user moments", responses));
+    }
+
     @GetMapping("/feed")
     public ResponseEntity<ApiResponse<PageResponse<MomentResponse>>> getFeedMoments(
             @RequestParam(defaultValue = "0") int page,
