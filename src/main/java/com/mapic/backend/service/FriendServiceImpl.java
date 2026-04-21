@@ -37,12 +37,23 @@ public class FriendServiceImpl implements IFriendService {
             throw new BadRequestException("Search query must be at least 2 characters");
         }
 
+        log.info("Searching users with query: {} for user: {}", query, currentUserId);
+
         String searchQuery = "%" + query.toLowerCase() + "%";
         List<User> users = userRepository.searchByNameOrUsername(searchQuery);
 
+        log.info("Found {} users matching query", users.size());
+
         return users.stream()
                 .filter(user -> !user.getId().equals(currentUserId)) // Exclude current user
-                .map(user -> mapToUserSearchResponse(user, currentUserId))
+                .map(user -> {
+                    try {
+                        return mapToUserSearchResponse(user, currentUserId);
+                    } catch (Exception e) {
+                        log.error("Error mapping user {} to response: {}", user.getId(), e.getMessage());
+                        throw e;
+                    }
+                })
                 .collect(Collectors.toList());
     }
 
@@ -60,9 +71,8 @@ public class FriendServiceImpl implements IFriendService {
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
         // Check if already friends
-        Optional<Friendship> existingFriendship = friendshipRepository
-                .findFriendshipBetweenUsers(senderId, dto.getReceiverId());
-        if (existingFriendship.isPresent()) {
+        boolean areFriends = friendshipRepository.existsFriendshipBetweenUsers(senderId, dto.getReceiverId());
+        if (areFriends) {
             throw new BadRequestException("Already friends");
         }
 
@@ -159,11 +169,21 @@ public class FriendServiceImpl implements IFriendService {
     public List<FriendResponse> getAllFriends(Long userId) {
         List<Friendship> friendships = friendshipRepository.findAllFriendsByUserId(userId);
         List<FriendResponse> friends = new ArrayList<>();
+        
+        // Use Set to track already added friend IDs to avoid duplicates
+        java.util.Set<Long> addedFriendIds = new java.util.HashSet<>();
 
         for (Friendship friendship : friendships) {
             User friend = friendship.getUser1().getId().equals(userId)
                     ? friendship.getUser2()
                     : friendship.getUser1();
+
+            // Skip if already added (because of bidirectional friendship)
+            if (addedFriendIds.contains(friend.getId())) {
+                continue;
+            }
+            
+            addedFriendIds.add(friend.getId());
 
             FriendResponse response = FriendResponse.builder()
                     .id(friend.getId())
@@ -183,10 +203,9 @@ public class FriendServiceImpl implements IFriendService {
     @Transactional
     public void unfriend(Long friendId, Long currentUserId) {
         // Check if friendship exists
-        Optional<Friendship> friendship = friendshipRepository
-                .findFriendshipBetweenUsers(currentUserId, friendId);
+        boolean areFriends = friendshipRepository.existsFriendshipBetweenUsers(currentUserId, friendId);
 
-        if (friendship.isEmpty()) {
+        if (!areFriends) {
             throw new NotFoundException("Friendship not found");
         }
 
@@ -216,9 +235,8 @@ public class FriendServiceImpl implements IFriendService {
     @Transactional(readOnly = true)
     public String getFriendshipStatus(Long currentUserId, Long targetUserId) {
         // Check if friends
-        Optional<Friendship> friendship = friendshipRepository
-                .findFriendshipBetweenUsers(currentUserId, targetUserId);
-        if (friendship.isPresent()) {
+        boolean areFriends = friendshipRepository.existsFriendshipBetweenUsers(currentUserId, targetUserId);
+        if (areFriends) {
             return "FRIENDS";
         }
 

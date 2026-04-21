@@ -33,17 +33,23 @@ public class LocationServiceImpl implements ILocationService {
 
     @Override
     public List<Province> getAllProvinces() {
-        return provinceRepository.findAll();
+        return provinceRepository.findAll().stream()
+                .sorted((a, b) -> a.getName().compareToIgnoreCase(b.getName()))
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<District> getDistrictsByProvince(Integer provinceId) {
-        return districtRepository.findByProvinceId(provinceId);
+        return districtRepository.findByProvinceId(provinceId).stream()
+                .sorted((a, b) -> a.getName().compareToIgnoreCase(b.getName()))
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<Commune> getCommunesByDistrict(Integer districtId) {
-        return communeRepository.findByDistrictId(districtId);
+        return communeRepository.findByDistrictId(districtId).stream()
+                .sorted((a, b) -> a.getName().compareToIgnoreCase(b.getName()))
+                .collect(Collectors.toList());
     }
 
     @Override

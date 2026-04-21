@@ -1,0 +1,45 @@
+@startuml AC09_MomentInteraction
+title AC09 - Xem khoảnh khắc
+
+skinparam conditionStyle InsideDiamond
+skinparam shadowing false
+
+start
+
+:Xem khoảnh khắc;
+:Hiển thị media, caption, vị trí;
+
+repeat
+  :Chọn hành động;
+
+  if (Hành động?) then (Thả cảm xúc)
+    :Chọn loại cảm xúc;
+    :Cập nhật cảm xúc;
+
+  elseif (Bình luận)
+    :Nhập nội dung;
+    :Đăng bình luận;
+
+  elseif (Chia sẻ)
+    :Chọn người nhận;
+    :Gửi qua tin nhắn;
+
+  elseif (Lưu)
+    :Chọn danh mục;
+    :Lưu khoảnh khắc;
+
+  elseif (Báo cáo)
+    :Chọn lý do;
+    :Gửi báo cáo;
+
+  elseif (Xem bản đồ)
+    :Mở trang bản đồ để xem vị trí bức ảnh;
+
+  else (Chỉ đường)
+    :Hiển thị đường đi thông qua google map;
+  endif
+
+repeat while (Tiếp tục xem / tương tác?) is (Có)
+
+stop
+@enduml

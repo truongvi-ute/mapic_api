@@ -159,4 +159,16 @@ public class MomentServiceImpl implements IMomentService {
         log.info("Fetched {} moments for feed", moments.size());
         return momentsPage;
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Moment> exploreMoments(String provinceId, String category, String sort, Pageable pageable) {
+        log.info("Exploring moments with filters - province: {}, category: {}, sort: {}", 
+                 provinceId, category, sort);
+        
+        // Note: sort parameter is currently ignored, always returns newest first
+        // TODO: Implement like/comment counting to enable popular sorting
+        
+        return momentRepository.exploreMoments(provinceId, category, pageable);
+    }
 }

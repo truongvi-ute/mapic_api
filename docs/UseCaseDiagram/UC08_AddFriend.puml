@@ -1,49 +1,48 @@
-@startuml UC08_AddFriend
+@startuml UC08_FriendManagement
 left to right direction
 skinparam packageStyle rectangle
+skinparam shadowing false
 
 actor "Người dùng" as User
 
-rectangle "Hệ thống Mapic" {
-  usecase "UC08: Kết bạn" as UC08
-  usecase "Tìm kiếm bạn bè\n(theo tên)" as UC08_1
-  usecase "Quét mã QR" as UC08_2
-  usecase "Gửi lời mời kết bạn" as UC08_3
-  usecase "Xem danh sách\nlời mời đã gửi" as UC08_4
-  usecase "Xem danh sách\nlời mời nhận được" as UC08_5
-  usecase "Chấp nhận lời mời" as UC08_6
-  usecase "Từ chối lời mời" as UC08_7
-  usecase "Hủy lời mời đã gửi" as UC08_8
-  usecase "Xem danh sách bạn bè" as UC08_9
-  usecase "Hủy kết bạn" as UC08_10
+rectangle "Hệ thống Mapic - Quản lý Bạn bè" {
+
+  ' Use Case chính
+  usecase "Tìm kiếm theo tên/username" as UC_Search
+
+  ' Hành động sau khi tìm thấy
+  usecase "Gửi lời mời kết bạn" as UC_SendRequest
+  usecase "Xem trang cá nhân" as UC_Profile
+
+  ' Quản lý danh sách
+  usecase "Xem danh sách bạn bè" as UC_FriendList
+  usecase "Xem danh sách lời mời" as UC_Requests
+
+  usecase "Hủy kết bạn" as UC_Unfriend
+  usecase "Chấp nhận lời mời" as UC_Accept
+  usecase "Từ chối lời mời" as UC_Decline
 }
 
-User --> UC08
+' Người dùng thực hiện các hành động chính
+User --> UC_Search
+User --> UC_FriendList
+User --> UC_Requests
 
-UC08 ..> UC08_1 : <<include>>
-UC08 ..> UC08_2 : <<include>>
-UC08 ..> UC08_3 : <<include>>
-UC08 ..> UC08_4 : <<extend>>
-UC08 ..> UC08_5 : <<extend>>
-UC08 ..> UC08_6 : <<extend>>
-UC08 ..> UC08_7 : <<extend>>
-UC08 ..> UC08_8 : <<extend>>
-UC08 ..> UC08_9 : <<extend>>
-UC08 ..> UC08_10 : <<extend>>
+' Sau khi tìm thấy thì có thể gửi lời mời hoặc xem profile
+UC_Search ..> UC_SendRequest : <<extend>>
+UC_Search ..> UC_Profile : <<extend>>
 
-note right of UC08_1
-  Tìm kiếm người dùng
-  theo tên hoặc username
-end note
+' Các thao tác trên danh sách
+UC_FriendList ..> UC_Profile : <<extend>>
+UC_FriendList ..> UC_Unfriend : <<extend>>
 
-note right of UC08_2
-  Quét mã QR của người dùng khác
-  để lấy thông tin và gửi lời mời
-end note
+UC_Requests ..> UC_Accept : <<extend>>
+UC_Requests ..> UC_Decline : <<extend>>
 
-note right of UC08_3
-  Gửi lời mời kết bạn
-  đến người dùng đã tìm thấy
+note top of UC_Search
+  Người dùng tìm kiếm bạn bè
+  bằng tên hoặc username.
+  Hỗ trợ tìm kiếm realtime.
 end note
 
 @enduml

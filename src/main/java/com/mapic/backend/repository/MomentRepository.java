@@ -49,4 +49,17 @@ public interface MomentRepository extends JpaRepository<Moment, Long> {
            "     ))" +
            ")")
     long countFeedMoments(@Param("userId") Long userId);
+    
+    // Explore moments with filters
+    @Query("SELECT m FROM Moment m " +
+           "WHERE m.status = 'ACTIVE' " +
+           "AND m.isPublic = true " +
+           "AND (:provinceId IS NULL OR m.province.id = :provinceId) " +
+           "AND (:category IS NULL OR m.category = :category) " +
+           "ORDER BY m.createdAt DESC")
+    Page<Moment> exploreMoments(
+            @Param("provinceId") String provinceId,
+            @Param("category") String category,
+            Pageable pageable
+    );
 }

@@ -3,6 +3,7 @@ package com.mapic.backend.repository;
 import com.mapic.backend.entity.Friendship;
 import com.mapic.backend.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -23,13 +24,19 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
            "ORDER BY f.createdAt DESC")
     List<Friendship> findAllFriendsByUserId(@Param("userId") Long userId);
     
-    // Check if friendship exists between two users
+    // Check if friendship exists between two users (return first match)
     @Query("SELECT f FROM Friendship f " +
            "WHERE (f.user1.id = :userId1 AND f.user2.id = :userId2) " +
            "OR (f.user1.id = :userId2 AND f.user2.id = :userId1)")
-    Optional<Friendship> findFriendshipBetweenUsers(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
+    List<Friendship> findFriendshipsBetweenUsers(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
+    
+    // Check if friendship exists (convenience method)
+    default boolean existsFriendshipBetweenUsers(Long userId1, Long userId2) {
+        return !findFriendshipsBetweenUsers(userId1, userId2).isEmpty();
+    }
     
     // Delete friendship between two users (both directions)
+    @Modifying
     @Query("DELETE FROM Friendship f " +
            "WHERE (f.user1.id = :userId1 AND f.user2.id = :userId2) " +
            "OR (f.user1.id = :userId2 AND f.user2.id = :userId1)")

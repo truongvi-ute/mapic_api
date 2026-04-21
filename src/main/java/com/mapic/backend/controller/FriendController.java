@@ -5,11 +5,13 @@ import com.mapic.backend.dto.request.SendFriendRequestDto;
 import com.mapic.backend.dto.response.FriendRequestResponse;
 import com.mapic.backend.dto.response.FriendResponse;
 import com.mapic.backend.dto.response.UserSearchResponse;
+import com.mapic.backend.entity.User;
+import com.mapic.backend.repository.UserRepository;
 import com.mapic.backend.service.IFriendService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,13 +22,16 @@ import java.util.List;
 public class FriendController {
 
     private final IFriendService friendService;
+    private final UserRepository userRepository;
 
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<List<UserSearchResponse>>> searchUsers(
-            @RequestParam String query,
-            Authentication authentication) {
-        Long currentUserId = Long.parseLong(authentication.getName());
-        List<UserSearchResponse> results = friendService.searchUsers(query, currentUserId);
+            @RequestParam String query) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        List<UserSearchResponse> results = friendService.searchUsers(query, currentUser.getId());
         
         return ResponseEntity.ok(ApiResponse.<List<UserSearchResponse>>builder()
                 .success(true)
@@ -37,10 +42,12 @@ public class FriendController {
 
     @PostMapping("/request")
     public ResponseEntity<ApiResponse<Void>> sendFriendRequest(
-            @Valid @RequestBody SendFriendRequestDto dto,
-            Authentication authentication) {
-        Long senderId = Long.parseLong(authentication.getName());
-        friendService.sendFriendRequest(dto, senderId);
+            @Valid @RequestBody SendFriendRequestDto dto) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User sender = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        friendService.sendFriendRequest(dto, sender.getId());
         
         return ResponseEntity.ok(ApiResponse.<Void>builder()
                 .success(true)
@@ -50,10 +57,12 @@ public class FriendController {
 
     @PostMapping("/accept/{requestId}")
     public ResponseEntity<ApiResponse<Void>> acceptFriendRequest(
-            @PathVariable Long requestId,
-            Authentication authentication) {
-        Long currentUserId = Long.parseLong(authentication.getName());
-        friendService.acceptFriendRequest(requestId, currentUserId);
+            @PathVariable Long requestId) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        friendService.acceptFriendRequest(requestId, currentUser.getId());
         
         return ResponseEntity.ok(ApiResponse.<Void>builder()
                 .success(true)
@@ -63,10 +72,12 @@ public class FriendController {
 
     @PostMapping("/reject/{requestId}")
     public ResponseEntity<ApiResponse<Void>> rejectFriendRequest(
-            @PathVariable Long requestId,
-            Authentication authentication) {
-        Long currentUserId = Long.parseLong(authentication.getName());
-        friendService.rejectFriendRequest(requestId, currentUserId);
+            @PathVariable Long requestId) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        friendService.rejectFriendRequest(requestId, currentUser.getId());
         
         return ResponseEntity.ok(ApiResponse.<Void>builder()
                 .success(true)
@@ -76,10 +87,12 @@ public class FriendController {
 
     @DeleteMapping("/request/{requestId}")
     public ResponseEntity<ApiResponse<Void>> cancelFriendRequest(
-            @PathVariable Long requestId,
-            Authentication authentication) {
-        Long currentUserId = Long.parseLong(authentication.getName());
-        friendService.cancelFriendRequest(requestId, currentUserId);
+            @PathVariable Long requestId) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        friendService.cancelFriendRequest(requestId, currentUser.getId());
         
         return ResponseEntity.ok(ApiResponse.<Void>builder()
                 .success(true)
@@ -88,10 +101,12 @@ public class FriendController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<FriendResponse>>> getAllFriends(
-            Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
-        List<FriendResponse> friends = friendService.getAllFriends(userId);
+    public ResponseEntity<ApiResponse<List<FriendResponse>>> getAllFriends() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        List<FriendResponse> friends = friendService.getAllFriends(user.getId());
         
         return ResponseEntity.ok(ApiResponse.<List<FriendResponse>>builder()
                 .success(true)
@@ -102,10 +117,12 @@ public class FriendController {
 
     @DeleteMapping("/{friendId}")
     public ResponseEntity<ApiResponse<Void>> unfriend(
-            @PathVariable Long friendId,
-            Authentication authentication) {
-        Long currentUserId = Long.parseLong(authentication.getName());
-        friendService.unfriend(friendId, currentUserId);
+            @PathVariable Long friendId) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        friendService.unfriend(friendId, currentUser.getId());
         
         return ResponseEntity.ok(ApiResponse.<Void>builder()
                 .success(true)
@@ -114,10 +131,12 @@ public class FriendController {
     }
 
     @GetMapping("/requests/pending")
-    public ResponseEntity<ApiResponse<List<FriendRequestResponse>>> getPendingRequests(
-            Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
-        List<FriendRequestResponse> requests = friendService.getPendingRequests(userId);
+    public ResponseEntity<ApiResponse<List<FriendRequestResponse>>> getPendingRequests() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        List<FriendRequestResponse> requests = friendService.getPendingRequests(user.getId());
         
         return ResponseEntity.ok(ApiResponse.<List<FriendRequestResponse>>builder()
                 .success(true)
@@ -127,10 +146,12 @@ public class FriendController {
     }
 
     @GetMapping("/requests/pending/count")
-    public ResponseEntity<ApiResponse<Long>> countPendingRequests(
-            Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
-        Long count = friendService.countPendingRequests(userId);
+    public ResponseEntity<ApiResponse<Long>> countPendingRequests() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        Long count = friendService.countPendingRequests(user.getId());
         
         return ResponseEntity.ok(ApiResponse.<Long>builder()
                 .success(true)
@@ -141,10 +162,12 @@ public class FriendController {
 
     @GetMapping("/status/{targetUserId}")
     public ResponseEntity<ApiResponse<String>> getFriendshipStatus(
-            @PathVariable Long targetUserId,
-            Authentication authentication) {
-        Long currentUserId = Long.parseLong(authentication.getName());
-        String status = friendService.getFriendshipStatus(currentUserId, targetUserId);
+            @PathVariable Long targetUserId) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        String status = friendService.getFriendshipStatus(currentUser.getId(), targetUserId);
         
         return ResponseEntity.ok(ApiResponse.<String>builder()
                 .success(true)
@@ -155,10 +178,12 @@ public class FriendController {
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<ApiResponse<UserSearchResponse>> getUserById(
-            @PathVariable Long userId,
-            Authentication authentication) {
-        Long currentUserId = Long.parseLong(authentication.getName());
-        UserSearchResponse user = friendService.getUserById(userId, currentUserId);
+            @PathVariable Long userId) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        UserSearchResponse user = friendService.getUserById(userId, currentUser.getId());
         
         return ResponseEntity.ok(ApiResponse.<UserSearchResponse>builder()
                 .success(true)

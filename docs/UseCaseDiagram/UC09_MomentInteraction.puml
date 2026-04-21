@@ -1,0 +1,39 @@
+@startuml UC09_ViewMoment
+left to right direction
+
+actor "Người dùng" as User
+
+package "Hệ thống MAPIC" {
+
+    usecase "Xem khoảnh khắc" as UC_View
+
+    ' Social interaction
+    usecase "Thả cảm xúc" as UC_React
+    usecase "Bình luận" as UC_Comment
+    usecase "Chia sẻ qua tin nhắn" as UC_Share
+    usecase "Báo cáo nội dung" as UC_Report
+    usecase "Lưu vào danh mục cá nhân" as UC_Save
+
+    ' Location-based actions
+    usecase "Xem trên bản đồ" as UC_Map
+    usecase "Chỉ đường" as UC_Direction
+
+    usecase "Chọn lý do báo cáo" as UC_ReportReason
+}
+
+User --> UC_View
+
+' Social interactions
+UC_React ..> UC_View : <<extend>>
+UC_Comment ..> UC_View : <<extend>>
+UC_Share ..> UC_View : <<extend>>
+UC_Report ..> UC_View : <<extend>>
+UC_Save ..> UC_View : <<extend>>
+
+' Map features
+UC_Map ..> UC_View : <<extend>>
+UC_Direction ..> UC_View : <<extend>>
+
+UC_Report ..> UC_ReportReason : <<include>>
+
+@enduml

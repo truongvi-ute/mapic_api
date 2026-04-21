@@ -1,74 +1,46 @@
 @startuml AC08_AddFriend
+title AC08 - Thêm bạn bè
+
+skinparam conditionStyle InsideDiamond
+skinparam shadowing false
+
 start
 
-:Người dùng mở màn hình\nTìm kiếm bạn bè;
+:Mở màn hình "Thêm bạn bè";
 
-partition "Tìm kiếm người dùng" {
-  :Chọn phương thức tìm kiếm;
+:Nhập tên hoặc username vào ô tìm kiếm;
+
+note right
+  Tìm kiếm realtime với debounce 500ms
+  Tự động tìm khi nhập >= 2 ký tự
+end note
+
+if (Có kết quả?) then (Có)
+  :Hiển thị danh sách người dùng;
   
-  if (Phương thức?) then (Tìm kiếm theo tên)
-    :Nhập tên hoặc username;
-    :Gọi API search user;
-    
-    if (Tìm thấy kết quả?) then (Có)
-      :Hiển thị danh sách\nngười dùng phù hợp;
-    else (Không)
-      :Hiển thị "Không tìm thấy\nngười dùng";
-      stop
-    endif
-    
-  else (Quét mã QR)
-    :Mở camera quét QR;
-    :Quét mã QR của người dùng;
-    
-    if (Quét thành công?) then (Có)
-      :Giải mã QR lấy userId;
-      :Gọi API get user by ID;
-      :Hiển thị thông tin người dùng;
-    else (Không)
-      :Hiển thị "Không thể quét mã QR";
-      stop
-    endif
-  endif
-}
-
-:Người dùng chọn một người\nđể gửi lời mời;
-
-partition "Kiểm tra trạng thái" {
-  if (Đã là bạn bè?) then (Có)
-    :Hiển thị "Đã là bạn bè";
-    stop
-  else (Không)
-    if (Đã gửi lời mời?) then (Có)
-      :Hiển thị "Đã gửi lời mời";
-      stop
-    else (Không)
-      if (Đã nhận lời mời?) then (Có)
-        :Hiển thị nút "Chấp nhận";
-        :Người dùng chấp nhận;
-        :Gọi API accept friend request;
-        :Cập nhật trạng thái thành bạn bè;
-        :Hiển thị "Đã kết bạn thành công";
-        stop
-      else (Không)
-        :Hiển thị nút "Kết bạn";
-      endif
-    endif
-  endif
-}
-
-partition "Gửi lời mời kết bạn" {
-  :Người dùng nhấn "Kết bạn";
-  :Gọi API send friend request;
+  :Chọn người dùng;
   
-  if (Gửi thành công?) then (Có)
-    :Lưu lời mời vào database;
-    :Gửi thông báo đến người nhận;
-    :Hiển thị "Đã gửi lời mời kết bạn";
-  else (Không)
-    :Hiển thị thông báo lỗi;
+  if (Trạng thái quan hệ?) then (Chưa kết bạn)
+    :Nhấn nút "Kết bạn";
+    :Gửi lời mời kết bạn;
+    :Hiển thị "Đã gửi";
+    
+  elseif (Đã gửi lời mời)
+    :Hiển thị trạng thái "Đã gửi";
+    note right: Có thể hủy lời mời
+    
+  elseif (Nhận được lời mời)
+    :Hiển thị nút "Chấp nhận";
+    :Chấp nhận lời mời;
+    :Trở thành bạn bè;
+    
+  else (Đã là bạn bè)
+    :Hiển thị "Bạn bè";
   endif
-}
+  
+else (Không)
+  :Hiển thị "Không tìm thấy";
+endif
 
 stop
 

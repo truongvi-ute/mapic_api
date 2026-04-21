@@ -1,27 +1,49 @@
-@startuml UC07_CreateMoment
+@startuml UC07_CreateMoment_Generalization
 left to right direction
+
 actor "Người dùng" as User
 
 package "Hệ thống MAPIC" {
-    usecase "UC07: Đăng khoảnh khắc" as UC07
-    usecase "Chụp ảnh/Quay video" as UC_Capture
-    usecase "Chọn từ thư viện" as UC_Gallery
+
+    usecase "Đăng khoảnh khắc" as UC07
+
+    ' 2 biến thể
+    usecase "Tạo bằng chụp nhanh" as UC_CaptureFlow
+    usecase "Tạo từ thư viện" as UC_GalleryFlow
+
+    ' Các hành vi chi tiết
+    usecase "Chụp ảnh / quay video" as UC_Capture
+    usecase "Chọn ảnh từ thư viện" as UC_Gallery
+
     usecase "Lấy vị trí GPS" as UC_GPS
     usecase "Chọn địa phận (3 cấp)" as UC_Region
-    usecase "Nhập mô tả & hashtag" as UC_Details
-    usecase "Xử lý tải lên Media" as UC_Upload
+
+    usecase "Nhập caption, hashtag,\ndanh mục, trạng thái" as UC_Details
 }
 
 User --> UC07
 
+' Chuyên biệt hóa
+UC_CaptureFlow --|> UC07
+UC_GalleryFlow --|> UC07
+
+' Flow 1: Chụp nhanh
+UC_CaptureFlow ..> UC_Capture : <<include>>
+UC_CaptureFlow ..> UC_GPS : <<include>>
+
+' Flow 2: Thư viện
+UC_GalleryFlow ..> UC_Gallery : <<include>>
+UC_GalleryFlow ..> UC_Region : <<include>>
+
+' Hành vi chung (áp dụng cho cả 2)
 UC07 ..> UC_Details : <<include>>
-UC07 ..> UC_Upload : <<include>>
 
-UC07 <.. UC_Capture : <<extend>>
-UC07 <.. UC_Gallery : <<extend>>
-UC07 <.. UC_GPS : <<extend>>
-UC07 <.. UC_Region : <<extend>>
+note right of UC_CaptureFlow
+Chụp ngay → lấy vị trí tự động (GPS)
+end note
 
-note right of UC_Capture : Sử dụng khi chọn\nchế độ Chụp nhanh
-note right of UC_Gallery : Sử dụng khi chọn\nđăng từ thư viện
+note right of UC_GalleryFlow
+Chọn ảnh → chọn vị trí thủ công
+end note
+
 @enduml
