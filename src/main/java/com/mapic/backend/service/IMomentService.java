@@ -1,5 +1,6 @@
 package com.mapic.backend.service;
 
+import com.mapic.backend.dto.MomentDto;
 import com.mapic.backend.dto.request.CreateMomentRequest;
 import com.mapic.backend.entity.Moment;
 import com.mapic.backend.entity.User;
@@ -15,4 +16,5 @@ public interface IMomentService {
     List<Moment> getMomentsByUser(Long userId, Long currentUserId);
     Page<Moment> getFeedMoments(Long userId, Pageable pageable);
     Page<Moment> exploreMoments(String provinceId, String category, String sort, Pageable pageable);
+    MomentDto convertToDto(Moment moment, Long currentUserId);
 }

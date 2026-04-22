@@ -1,5 +1,6 @@
 package com.mapic.backend.service;
 
+import com.mapic.backend.dto.MomentDto;
 import com.mapic.backend.dto.request.CreateMomentRequest;
 import com.mapic.backend.entity.*;
 import com.mapic.backend.repository.*;
@@ -28,6 +29,7 @@ public class MomentServiceImpl implements IMomentService {
     private final FriendshipRepository friendshipRepository;
     private final IStorageService storageService;
     private final OpenCageService openCageService;
+    private final ReactionRepository reactionRepository;
 
     @Override
     @Transactional
@@ -186,5 +188,98 @@ public class MomentServiceImpl implements IMomentService {
         // TODO: Implement like/comment counting to enable popular sorting
         
         return momentRepository.exploreMoments(provinceId, category, pageable);
+    }
+
+    @Override
+    public MomentDto convertToDto(Moment moment, Long currentUserId) {
+        // Build author DTO
+        MomentDto.AuthorDto authorDto = MomentDto.AuthorDto.builder()
+                .id(moment.getAuthor().getId())
+                .username(moment.getAuthor().getUsername())
+                .fullName(moment.getAuthor().getName())
+                .avatarUrl(moment.getAuthor().getUserProfile() != null ? 
+                    moment.getAuthor().getUserProfile().getAvatarUrl() : null)
+                .build();
+
+        // Build location DTO if exists
+        MomentDto.LocationDto locationDto = null;
+        if (moment.getLocation() != null) {
+            locationDto = MomentDto.LocationDto.builder()
+                    .id(moment.getLocation().getId())
+                    .latitude(moment.getLocation().getLatitude())
+                    .longitude(moment.getLocation().getLongitude())
+                    .address(moment.getLocation().getAddress())
+                    .name(moment.getLocation().getName())
+                    .build();
+        }
+
+        // Build province DTO if exists
+        MomentDto.ProvinceDto provinceDto = null;
+        if (moment.getProvince() != null) {
+            provinceDto = MomentDto.ProvinceDto.builder()
+                    .id(moment.getProvince().getId().longValue())
+                    .name(moment.getProvince().getName())
+                    .code(moment.getProvince().getCode())
+                    .build();
+        }
+
+        // Build district DTO if exists
+        MomentDto.DistrictDto districtDto = null;
+        if (moment.getDistrict() != null) {
+            districtDto = MomentDto.DistrictDto.builder()
+                    .id(moment.getDistrict().getId().longValue())
+                    .name(moment.getDistrict().getName())
+                    .code(moment.getDistrict().getCode())
+                    .build();
+        }
+
+        // Build commune DTO if exists
+        MomentDto.CommuneDto communeDto = null;
+        if (moment.getCommune() != null) {
+            communeDto = MomentDto.CommuneDto.builder()
+                    .id(moment.getCommune().getId().longValue())
+                    .name(moment.getCommune().getName())
+                    .code(moment.getCommune().getCode())
+                    .build();
+        }
+
+        // Build media DTOs
+        List<MomentDto.MediaDto> mediaDtos = moment.getMedia().stream()
+                .map(media -> MomentDto.MediaDto.builder()
+                        .id(media.getId())
+                        .mediaUrl(media.getMediaUrl())
+                        .mediaType(media.getMediaType().name())
+                        .sortOrder(media.getSortOrder())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+
+        // Count reactions
+        long reactionCount = reactionRepository.countByMoment(moment);
+
+        // Check if current user reacted
+        boolean userReacted = false;
+        if (currentUserId != null) {
+            User currentUser = new User();
+            currentUser.setId(currentUserId);
+            userReacted = reactionRepository.existsByUserAndMoment(currentUser, moment);
+        }
+
+        // Build and return MomentDto
+        return MomentDto.builder()
+                .id(moment.getId())
+                .content(moment.getContent())
+                .author(authorDto)
+                .location(locationDto)
+                .province(provinceDto)
+                .district(districtDto)
+                .commune(communeDto)
+                .category(moment.getCategory())
+                .isPublic(moment.getIsPublic())
+                .status(moment.getStatus())
+                .createdAt(moment.getCreatedAt())
+                .media(mediaDtos)
+                .reactionCount(reactionCount)
+                .userReacted(userReacted)
+                .build();
     }
 }
