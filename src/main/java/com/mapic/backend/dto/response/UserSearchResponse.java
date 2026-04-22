@@ -14,5 +14,6 @@ public class UserSearchResponse {
     private String username;
     private String name;
     private String avatarUrl;
+    private String coverImageUrl;
     private String friendshipStatus; // NONE, PENDING_SENT, PENDING_RECEIVED, FRIENDS
 }

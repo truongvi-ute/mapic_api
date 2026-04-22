@@ -290,4 +290,54 @@ public class MomentServiceImpl implements IMomentService {
                 .commentCount(commentCount)
                 .build();
     }
+
+    @Override
+    @Transactional
+    public void deleteMoment(Long momentId, Long userId) {
+        log.info("Deleting moment {} by user {}", momentId, userId);
+        
+        Moment moment = momentRepository.findById(momentId)
+                .orElseThrow(() -> new RuntimeException("Moment not found"));
+        
+        // Check if user is the author
+        if (!moment.getAuthor().getId().equals(userId)) {
+            throw new RuntimeException("You are not authorized to delete this moment");
+        }
+        
+        // Delete associated media files from storage
+        if (moment.getMedia() != null && !moment.getMedia().isEmpty()) {
+            for (MomentMedia media : moment.getMedia()) {
+                try {
+                    storageService.delete(media.getMediaUrl(), "moments");
+                    log.info("Deleted media file: {}", media.getMediaUrl());
+                } catch (Exception e) {
+                    log.error("Failed to delete media file: {}", media.getMediaUrl(), e);
+                }
+            }
+        }
+        
+        // Delete moment (cascade will delete media, reactions, comments)
+        momentRepository.delete(moment);
+        log.info("Deleted moment {}", momentId);
+    }
+
+    @Override
+    @Transactional
+    public Moment updateMomentContent(Long momentId, Long userId, String newContent) {
+        log.info("Updating moment {} content by user {}", momentId, userId);
+        
+        Moment moment = momentRepository.findById(momentId)
+                .orElseThrow(() -> new RuntimeException("Moment not found"));
+        
+        // Check if user is the author
+        if (!moment.getAuthor().getId().equals(userId)) {
+            throw new RuntimeException("You are not authorized to update this moment");
+        }
+        
+        moment.setContent(newContent);
+        moment = momentRepository.save(moment);
+        
+        log.info("Updated moment {} content", momentId);
+        return moment;
+    }
 }

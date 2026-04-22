@@ -18,4 +18,6 @@ public interface IMomentService {
     Page<Moment> exploreMoments(Integer provinceId, String category, String sort, Pageable pageable);
     MomentDto convertToDto(Moment moment, Long currentUserId);
     Moment getMomentById(Long momentId);
+    void deleteMoment(Long momentId, Long userId);
+    Moment updateMomentContent(Long momentId, Long userId, String newContent);
 }

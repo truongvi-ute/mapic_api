@@ -20,6 +20,8 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
 
     void deleteByConversationAndUser(Conversation conversation, User user);
 
+    void deleteByConversation(Conversation conversation);
+
     // Query bằng ID để tránh entity comparison issues
     @Query("SELECT COUNT(p) > 0 FROM Participant p WHERE p.conversation.id = :convId AND p.user.id = :userId")
     boolean existsByConversationIdAndUserId(@Param("convId") Long convId, @Param("userId") Long userId);

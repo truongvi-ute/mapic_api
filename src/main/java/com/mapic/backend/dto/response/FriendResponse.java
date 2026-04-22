@@ -16,5 +16,6 @@ public class FriendResponse {
     private String username;
     private String name;
     private String avatarUrl;
+    private String coverImageUrl;
     private LocalDateTime friendsSince;
 }
