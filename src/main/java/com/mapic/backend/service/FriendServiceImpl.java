@@ -197,6 +197,7 @@ public class FriendServiceImpl implements IFriendService {
                     .username(friend.getUsername())
                     .name(friend.getName())
                     .avatarUrl(friend.getUserProfile() != null ? friend.getUserProfile().getAvatarUrl() : null)
+                    .coverImageUrl(friend.getUserProfile() != null ? friend.getUserProfile().getCoverImageUrl() : null)
                     .friendsSince(friendship.getCreatedAt())
                     .build();
 
@@ -291,6 +292,7 @@ public class FriendServiceImpl implements IFriendService {
                 .username(user.getUsername())
                 .name(user.getName())
                 .avatarUrl(user.getUserProfile() != null ? user.getUserProfile().getAvatarUrl() : null)
+                .coverImageUrl(user.getUserProfile() != null ? user.getUserProfile().getCoverImageUrl() : null)
                 .friendshipStatus(status)
                 .build();
     }
@@ -303,6 +305,7 @@ public class FriendServiceImpl implements IFriendService {
                 .senderName(sender.getName())
                 .senderUsername(sender.getUsername())
                 .senderAvatarUrl(sender.getUserProfile() != null ? sender.getUserProfile().getAvatarUrl() : null)
+                .senderCoverUrl(sender.getUserProfile() != null ? sender.getUserProfile().getCoverImageUrl() : null)
                 .createdAt(request.getCreatedAt())
                 .build();
     }

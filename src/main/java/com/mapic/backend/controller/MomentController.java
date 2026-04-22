@@ -216,4 +216,55 @@ public class MomentController {
 
         return ResponseEntity.ok(ApiResponse.success("Moment details", response));
     }
+
+    @DeleteMapping("/{momentId}")
+    public ResponseEntity<ApiResponse<Void>> deleteMoment(@PathVariable Long momentId) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        log.info("DELETE /api/moments/{} - User: {} (ID: {})", momentId, username, user.getId());
+
+        try {
+            momentService.deleteMoment(momentId, user.getId());
+            log.info("Successfully deleted moment {}", momentId);
+            return ResponseEntity.ok(ApiResponse.success("Moment deleted successfully", null));
+        } catch (RuntimeException e) {
+            log.error("Error deleting moment {}: {}", momentId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/{momentId}/content")
+    public ResponseEntity<ApiResponse<MomentResponse>> updateMomentContent(
+            @PathVariable Long momentId,
+            @RequestBody UpdateContentRequest request) {
+        
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        try {
+            Moment moment = momentService.updateMomentContent(momentId, user.getId(), request.getContent());
+            
+            long reactionCount = reactionRepository.countByMoment(moment);
+            boolean userReacted = reactionRepository.existsByUserAndMoment(user, moment);
+            long commentCount = commentRepository.countByMoment(moment);
+            MomentResponse response = MomentResponse.fromEntityWithReactionAndComment(
+                    moment, reactionCount, userReacted, commentCount);
+            
+            return ResponseEntity.ok(ApiResponse.success("Moment content updated successfully", response));
+        } catch (RuntimeException e) {
+            log.error("Error updating moment content", e);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    // Inner class for update content request
+    @lombok.Data
+    public static class UpdateContentRequest {
+        private String content;
+    }
 }

@@ -76,6 +76,10 @@ public class ChatService {
     public ConversationDto createGroupConversation(Long creatorId, String title, List<Long> memberIds) {
         User creator = getUser(creatorId);
 
+        if (memberIds == null || memberIds.size() < 2) {
+            throw new RuntimeException("Nhóm cần ít nhất 3 người (bạn + 2 thành viên)");
+        }
+
         // Validate all members are friends
         for (Long memberId : memberIds) {
             if (!friendshipRepository.existsFriendshipBetweenUsers(creatorId, memberId)) {
@@ -116,8 +120,56 @@ public class ChatService {
             throw new RuntimeException("Chỉ người tạo nhóm mới có thể xóa thành viên");
         }
 
+        // Đảm bảo nhóm còn ít nhất 3 người sau khi xóa
+        long currentCount = participantRepository.findByConversation(conv).size();
+        if (currentCount <= 3) {
+            throw new RuntimeException("Nhóm cần ít nhất 3 người, không thể xóa thêm thành viên");
+        }
+
         User target = getUser(targetUserId);
         participantRepository.deleteByConversationAndUser(conv, target);
+    }
+
+    @Transactional
+    public ConversationDto renameGroup(Long conversationId, Long requesterId, String newTitle) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Cuộc trò chuyện không tồn tại"));
+
+        if (!conv.getIsGroup()) {
+            throw new RuntimeException("Chỉ có thể đổi tên nhóm");
+        }
+        if (!conv.getCreator().getId().equals(requesterId)) {
+            throw new RuntimeException("Chỉ trưởng nhóm mới có thể đổi tên");
+        }
+        if (newTitle == null || newTitle.trim().isEmpty()) {
+            throw new RuntimeException("Tên nhóm không được để trống");
+        }
+
+        conv.setTitle(newTitle.trim());
+        conversationRepository.save(conv);
+        return toConversationDto(conv, requesterId);
+    }
+
+    @Transactional
+    public void deleteGroup(Long conversationId, Long requesterId) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Cuộc trò chuyện không tồn tại"));
+
+        if (!conv.getIsGroup()) {
+            throw new RuntimeException("Chỉ có thể xóa nhóm");
+        }
+        if (!conv.getCreator().getId().equals(requesterId)) {
+            throw new RuntimeException("Chỉ trưởng nhóm mới có thể xóa nhóm");
+        }
+
+        // Xóa reactions → messages → participants → conversation
+        List<Message> messages = messageRepository.findAllByConversation(conv);
+        for (Message msg : messages) {
+            messageReactionRepository.deleteByMessage(msg);
+        }
+        messageRepository.deleteAll(messages);
+        participantRepository.deleteByConversation(conv);
+        conversationRepository.delete(conv);
     }
 
     // ─────────────────── Messages ───────────────────
@@ -343,11 +395,14 @@ public class ChatService {
                     String fullName = p.getUser().getName();
                     String avatar = p.getUser().getUserProfile() != null
                             ? p.getUser().getUserProfile().getAvatarUrl() : null;
+                    String cover = p.getUser().getUserProfile() != null
+                            ? p.getUser().getUserProfile().getCoverImageUrl() : null;
                     return ParticipantDto.builder()
                             .userId(p.getUser().getId())
                             .username(p.getUser().getUsername())
                             .fullName(fullName)
                             .avatarUrl(avatar)
+                            .coverImageUrl(cover)
                             .role(p.getRole())
                             .build();
                 })

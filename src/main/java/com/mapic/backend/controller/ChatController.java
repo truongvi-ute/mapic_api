@@ -62,6 +62,24 @@ public class ChatController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Đã xóa thành viên", null));
     }
 
+    @PutMapping("/rooms/{roomId}/title")
+    public ResponseEntity<ApiResponse<ConversationDto>> renameGroup(
+            @PathVariable Long roomId,
+            @RequestBody Map<String, String> body,
+            Authentication auth) {
+        User me = getUser(auth);
+        ConversationDto dto = chatService.renameGroup(roomId, me.getId(), body.get("title"));
+        return ResponseEntity.ok(new ApiResponse<>(true, "Đã đổi tên nhóm", dto));
+    }
+
+    @DeleteMapping("/rooms/{roomId}")
+    public ResponseEntity<ApiResponse<Void>> deleteGroup(
+            @PathVariable Long roomId, Authentication auth) {
+        User me = getUser(auth);
+        chatService.deleteGroup(roomId, me.getId());
+        return ResponseEntity.ok(new ApiResponse<>(true, "Đã xóa nhóm", null));
+    }
+
     // ─── REST: Message History ───
 
     @GetMapping("/rooms/{roomId}/messages")

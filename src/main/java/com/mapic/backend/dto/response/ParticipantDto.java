@@ -11,5 +11,6 @@ public class ParticipantDto {
     private String username;
     private String fullName;
     private String avatarUrl;
+    private String coverImageUrl;
     private String role; // ADMIN, MEMBER
 }

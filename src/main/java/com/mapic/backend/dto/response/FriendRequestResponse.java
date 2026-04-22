@@ -17,5 +17,6 @@ public class FriendRequestResponse {
     private String senderName;
     private String senderUsername;
     private String senderAvatarUrl;
+    private String senderCoverUrl;
     private LocalDateTime createdAt;
 }
