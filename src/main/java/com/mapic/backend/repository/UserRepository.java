@@ -1,6 +1,7 @@
 package com.mapic.backend.repository;
 
 import com.mapic.backend.entity.User;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -27,4 +28,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
            "OR LOWER(u.username) LIKE :query " +
            "ORDER BY u.name ASC")
     List<User> searchByNameOrUsername(@Param("query") String query);
+    
+    // Search users by username or full name with pagination
+    @Query("SELECT u FROM User u " +
+           "LEFT JOIN FETCH u.userProfile " +
+           "WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "OR LOWER(u.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "ORDER BY u.name ASC")
+    List<User> searchByUsernameOrFullName(@Param("search") String search, Pageable pageable);
 }

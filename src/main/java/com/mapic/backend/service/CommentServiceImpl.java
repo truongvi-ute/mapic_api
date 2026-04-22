@@ -5,12 +5,14 @@ import com.mapic.backend.dto.request.CommentRequest;
 import com.mapic.backend.entity.Comment;
 import com.mapic.backend.entity.Moment;
 import com.mapic.backend.entity.User;
+import com.mapic.backend.entity.NotificationType;
 import com.mapic.backend.exception.NotFoundException;
 import com.mapic.backend.exception.ValidationException;
 import com.mapic.backend.repository.CommentRepository;
 import com.mapic.backend.repository.MomentRepository;
 import com.mapic.backend.repository.ReactionRepository;
 import com.mapic.backend.repository.UserRepository;
+import com.mapic.backend.service.INotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -31,6 +33,7 @@ public class CommentServiceImpl implements ICommentService {
     private final MomentRepository momentRepository;
     private final UserRepository userRepository;
     private final ReactionRepository reactionRepository;
+    private final INotificationService notificationService;
 
     private User getCurrentUser() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -80,6 +83,14 @@ public class CommentServiceImpl implements ICommentService {
 
         Comment savedComment = commentRepository.save(comment);
         log.info("User {} created comment {} on moment {}", user.getUsername(), savedComment.getId(), momentId);
+
+        // Notify moment author
+        notificationService.createNotification(user, moment.getAuthor(), NotificationType.MOMENT_COMMENT, "MOMENT", momentId);
+
+        // If it's a reply, notify the parent comment author
+        if (parentComment != null) {
+            notificationService.createNotification(user, parentComment.getAuthor(), NotificationType.MOMENT_COMMENT, "COMMENT", parentComment.getId());
+        }
         
         return convertToDto(savedComment, user.getId());
     }

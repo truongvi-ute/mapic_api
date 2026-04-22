@@ -36,6 +36,31 @@ public class Notification {
     @Builder.Default
     private Boolean isRead = false;
 
+    // ========== NEW FIELDS FOR ENHANCEMENT ==========
+    
+    // Priority: HIGH (SOS), NORMAL (friend requests), LOW (reactions)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private NotificationPriority priority = NotificationPriority.NORMAL;
+    
+    // Rich media: thumbnail of moment/photo
+    @Column(length = 500)
+    private String thumbnailUrl;
+    
+    // Content preview: snippet of comment, message, etc.
+    @Column(length = 200)
+    private String contentPreview;
+    
+    // Aggregation: store multiple actor IDs as comma-separated string
+    // Example: "1,2,3,4,5" means users 1,2,3,4,5 all liked the same post
+    @Column(length = 1000)
+    private String actorIds;
+    
+    // Count of actors (for "John and 5 others")
+    @Builder.Default
+    private Integer actorCount = 1;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -36,6 +36,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/provinces/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
+                .requestMatchers("/chat-socket/**").permitAll()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session

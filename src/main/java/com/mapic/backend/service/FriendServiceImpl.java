@@ -29,6 +29,7 @@ public class FriendServiceImpl implements IFriendService {
     private final UserRepository userRepository;
     private final FriendRequestRepository friendRequestRepository;
     private final FriendshipRepository friendshipRepository;
+    private final INotificationService notificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -92,6 +93,9 @@ public class FriendServiceImpl implements IFriendService {
 
         friendRequestRepository.save(request);
         log.info("Friend request sent from user {} to user {}", senderId, dto.getReceiverId());
+
+        // Notify receiver
+        notificationService.createNotification(sender, receiver, NotificationType.FRIEND_REQUEST, "FRIENDSHIP", request.getId());
     }
 
     @Override
@@ -130,6 +134,9 @@ public class FriendServiceImpl implements IFriendService {
 
         log.info("Friend request {} accepted. Users {} and {} are now friends",
                 requestId, request.getSender().getId(), request.getReceiver().getId());
+
+        // Notify sender that their request was accepted
+        notificationService.createNotification(request.getReceiver(), request.getSender(), NotificationType.FRIEND_ACCEPT, "FRIENDSHIP", request.getId());
     }
 
     @Override

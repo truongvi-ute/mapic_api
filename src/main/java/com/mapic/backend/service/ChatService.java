@@ -30,6 +30,7 @@ public class ChatService {
     private final AlbumRepository albumRepository;
     private final AlbumItemRepository albumItemRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final INotificationService notificationService;
 
     // ─────────────────── Conversations ───────────────────
 
@@ -53,9 +54,9 @@ public class ChatService {
         }
 
         // Return existing if already exists
-        Optional<Conversation> existing = conversationRepository.findDirectConversation(me, friend);
-        if (existing.isPresent()) {
-            return toConversationDto(existing.get(), myId);
+        List<Conversation> existing = conversationRepository.findDirectConversation(me, friend);
+        if (!existing.isEmpty()) {
+            return toConversationDto(existing.get(0), myId);
         }
 
         // Create new direct conv
@@ -167,6 +168,9 @@ public class ChatService {
         // Notify all participants about list update (conversation topic)
         broadcastConversationUpdate(conv);
 
+        // Send individual notifications to participants
+        notifyParticipants(conv, sender, MessageType.TEXT, msg.getId());
+
         return dto;
     }
 
@@ -194,6 +198,9 @@ public class ChatService {
         MessageDto dto = toMessageDto(msg, senderId);
         broadcastToConversation(conv, dto);
         broadcastConversationUpdate(conv);
+
+        // Send individual notifications
+        notifyParticipants(conv, sender, MessageType.SHARE, msg.getId());
 
         return dto;
     }
@@ -248,6 +255,21 @@ public class ChatService {
                 "/topic/conversations",
                 convoDto
             );
+        }
+    }
+
+    private void notifyParticipants(Conversation conv, User sender, MessageType type, Long messageId) {
+        List<Participant> participants = participantRepository.findByConversation(conv);
+        for (Participant p : participants) {
+            if (!p.getUser().getId().equals(sender.getId())) {
+                notificationService.createNotification(
+                    sender, 
+                    p.getUser(), 
+                    NotificationType.NEW_MESSAGE, 
+                    "MESSAGE", 
+                    messageId
+                );
+            }
         }
     }
 

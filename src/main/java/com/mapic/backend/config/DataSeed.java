@@ -30,6 +30,8 @@ public class DataSeed implements CommandLineRunner {
     private final ReactionRepository reactionRepository;
     private final CommentRepository commentRepository;
     private final LocationRepository locationRepository;
+    private final UserStatusRepository userStatusRepository;
+    private final NotificationRepository notificationRepository;
     private final PasswordEncoder passwordEncoder;
 
     private final Random random = new Random();
@@ -37,6 +39,17 @@ public class DataSeed implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) throws Exception {
+        // Clean up mock avatars from previous seeds
+        log.info("Cleaning up mock avatar URLs...");
+        List<UserProfile> profiles = userProfileRepository.findAll();
+        for (UserProfile profile : profiles) {
+            if (profile.getAvatarUrl() != null && profile.getAvatarUrl().contains("pravatar")) {
+                log.info("Removing mock avatar for user: {}", profile.getUser().getUsername());
+                profile.setAvatarUrl(null);
+                userProfileRepository.save(profile);
+            }
+        }
+        
         if (userRepository.count() >= 5) {
             log.info("Database already seeded with enough users. Skipping data seed.");
             return;
@@ -62,6 +75,10 @@ public class DataSeed implements CommandLineRunner {
         String password = passwordEncoder.encode("123456");
 
         List<User> users = new ArrayList<>();
+        // Base GPS coordinates (around Ho Chi Minh City)
+        double[] baseLats = {10.7361, 10.7365, 10.7370, 10.7355, 10.7380};
+        double[] baseLngs = {106.9487, 106.9490, 106.9485, 106.9495, 106.9480};
+        
         for (int i = 0; i < 5; i++) {
             int userNum = i + 1;
             User user = User.builder()
@@ -77,8 +94,10 @@ public class DataSeed implements CommandLineRunner {
             user = userRepository.save(user);
             users.add(user);
 
+            // Create UserProfile with avatar (only if not exists)
             UserProfile profile = UserProfile.builder()
                     .user(user)
+                    .avatarUrl(null) // Don't set mock avatar, let users upload their own
                     .bio("Xin chào, tôi là " + fullNames[i] + ". Rất vui được làm quen với mọi người trên MAPIC!")
                     .gender(genders[i])
                     .dateOfBirth(LocalDate.now().minusYears(20 + i))
@@ -86,16 +105,37 @@ public class DataSeed implements CommandLineRunner {
                     .updatedAt(LocalDateTime.now())
                     .build();
             userProfileRepository.save(profile);
+            
+            // Create UserStatus with GPS coordinates
+            UserStatus status = UserStatus.builder()
+                    .user(user)
+                    .lastLat(baseLats[i])
+                    .lastLng(baseLngs[i])
+                    .lastSeenAt(LocalDateTime.now())
+                    .isSharingLocation(true)
+                    .batteryLevel(80 + random.nextInt(20))
+                    .build();
+            userStatusRepository.save(status);
+            
+            log.info("Created user: {} with GPS: {}, {}", user.getUsername(), baseLats[i], baseLngs[i]);
         }
 
         // 2. Create Friendships and Friend Requests
-        // user1 is friends with user2 and user3
-        createFriendship(users.get(0), users.get(1));
-        createFriendship(users.get(0), users.get(2));
+        // user1 is friends with all other users (for map testing)
+        log.info("Creating friendships for map feature...");
+        createFriendship(users.get(0), users.get(1)); // user1 <-> user2
+        createFriendship(users.get(0), users.get(2)); // user1 <-> user3
+        createFriendship(users.get(0), users.get(3)); // user1 <-> user4
+        createFriendship(users.get(0), users.get(4)); // user1 <-> user5
+        
+        // Also create some friendships between other users
+        createFriendship(users.get(1), users.get(2)); // user2 <-> user3
+        createFriendship(users.get(2), users.get(3)); // user3 <-> user4
 
         // Pending requests
-        createFriendRequest(users.get(3), users.get(0)); // user4 -> user1
-        createFriendRequest(users.get(4), users.get(1)); // user5 -> user2
+        createFriendRequest(users.get(4), users.get(3)); // user5 -> user4
+        
+        log.info("Created {} friendships", friendshipRepository.count() / 2);
 
         // 3. Create Moments
         String[] categories = {"LANDSCAPE", "FOOD", "OTHER", "ARCHITECTURE", "PEOPLE"};
@@ -182,7 +222,43 @@ public class DataSeed implements CommandLineRunner {
             }
         }
 
+        // 5. Create Sample Notifications
+        createSampleNotifications(users, allMoments);
+
         log.info("Data seeding completed successfully!");
+    }
+
+    private void createSampleNotifications(List<User> users, List<Moment> moments) {
+        if (users.size() < 5 || moments.isEmpty()) return;
+        
+        User mainUser = users.get(0); // user1
+        
+        // 1. Friend request
+        createNotification(users.get(3), mainUser, NotificationType.FRIEND_REQUEST, "FRIENDSHIP", 1L);
+        
+        // 2. Moment reaction
+        createNotification(users.get(1), mainUser, NotificationType.MOMENT_REACTION, "MOMENT", moments.get(0).getId());
+        
+        // 3. Moment comment
+        createNotification(users.get(2), mainUser, NotificationType.MOMENT_COMMENT, "MOMENT", moments.get(0).getId());
+        
+        // 4. New message
+        createNotification(users.get(4), mainUser, NotificationType.NEW_MESSAGE, "MESSAGE", 1L);
+        
+        log.info("Seeded 4 mock notifications for user: {}", mainUser.getUsername());
+    }
+
+    private void createNotification(User actor, User recipient, NotificationType type, String targetType, Long targetId) {
+        Notification notification = Notification.builder()
+                .actor(actor)
+                .recipient(recipient)
+                .type(type)
+                .targetType(targetType)
+                .targetId(targetId)
+                .isRead(false)
+                .createdAt(LocalDateTime.now().minusMinutes(new Random().nextInt(60)))
+                .build();
+        notificationRepository.save(notification);
     }
 
     private void createFriendship(User u1, User u2) {

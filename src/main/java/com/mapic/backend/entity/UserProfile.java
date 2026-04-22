@@ -34,6 +34,10 @@ public class UserProfile {
     private LocalDate dateOfBirth;
     private String location;
 
+    // Expo Push Notification Token
+    @Column(length = 200)
+    private String expoPushToken;
+
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 

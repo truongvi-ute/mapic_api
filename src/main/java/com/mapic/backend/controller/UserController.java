@@ -69,4 +69,14 @@ public class UserController {
         String coverUrl = userService.uploadCoverImage(username, file);
         return ResponseEntity.ok(ApiResponse.success("Cover image uploaded successfully", Map.of("coverUrl", coverUrl)));
     }
+
+    @PostMapping("/push-token")
+    public ResponseEntity<ApiResponse<Void>> savePushToken(
+            @RequestBody Map<String, String> request,
+            Authentication authentication) {
+        String username = authentication.getName();
+        String pushToken = request.get("pushToken");
+        userService.savePushToken(username, pushToken);
+        return ResponseEntity.ok(ApiResponse.success("Push token saved successfully", null));
+    }
 }

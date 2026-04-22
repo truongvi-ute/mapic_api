@@ -70,8 +70,18 @@ public class FileStorageServiceImpl implements IStorageService {
     @Override
     public String resolveUrl(String filename, String subDir) {
         if (filename == null || filename.isEmpty()) return null;
-        // Logic to return URL path that frontend can access
-        // Typically /api/uploads/subDir/filename
+        
+        // If already a full URL (http:// or https://), return as-is
+        if (filename.startsWith("http://") || filename.startsWith("https://")) {
+            return filename;
+        }
+        
+        // If already starts with /uploads/, return as-is (already resolved)
+        if (filename.startsWith("/uploads/")) {
+            return filename;
+        }
+        
+        // Otherwise, build the URL path
         return "/uploads/" + subDir + "/" + filename;
     }
 }

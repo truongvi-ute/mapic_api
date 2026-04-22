@@ -13,6 +13,7 @@ import com.mapic.backend.repository.FriendshipRepository;
 import com.mapic.backend.repository.UserProfileRepository;
 import com.mapic.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,6 +23,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserServiceImpl implements IUserService {
 
     private final UserRepository userRepository;
@@ -128,8 +130,10 @@ public class UserServiceImpl implements IUserService {
             profile = UserProfile.builder().user(user).build();
         }
 
-        // Delete old avatar
-        if (profile.getAvatarUrl() != null) {
+        // Delete old avatar only if it's a local file (not external URL)
+        if (profile.getAvatarUrl() != null 
+                && !profile.getAvatarUrl().startsWith("http://") 
+                && !profile.getAvatarUrl().startsWith("https://")) {
             storageService.delete(profile.getAvatarUrl(), "avatars");
         }
 
@@ -151,8 +155,10 @@ public class UserServiceImpl implements IUserService {
             profile = UserProfile.builder().user(user).build();
         }
 
-        // Delete old cover
-        if (profile.getCoverImageUrl() != null) {
+        // Delete old cover only if it's a local file (not external URL)
+        if (profile.getCoverImageUrl() != null
+                && !profile.getCoverImageUrl().startsWith("http://")
+                && !profile.getCoverImageUrl().startsWith("https://")) {
             storageService.delete(profile.getCoverImageUrl(), "covers");
         }
 
@@ -161,6 +167,23 @@ public class UserServiceImpl implements IUserService {
         userProfileRepository.save(profile);
 
         return storageService.resolveUrl(filename, "covers");
+    }
+
+    @Override
+    @Transactional
+    public void savePushToken(String username, String pushToken) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException("User not found"));
+
+        UserProfile profile = user.getUserProfile();
+        if (profile == null) {
+            profile = UserProfile.builder().user(user).build();
+        }
+
+        profile.setExpoPushToken(pushToken);
+        userProfileRepository.save(profile);
+        
+        log.info("Saved push token for user: {}", username);
     }
 
     private UserProfileResponse mapToResponse(User user) {
@@ -178,6 +201,7 @@ public class UserServiceImpl implements IUserService {
                 .gender(profile != null ? profile.getGender() : null)
                 .dateOfBirth(profile != null ? profile.getDateOfBirth() : null)
                 .location(profile != null ? profile.getLocation() : null)
+                .profileUpdatedAt(profile != null ? profile.getUpdatedAt() : null)
                 .build();
     }
 }

@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -24,4 +25,5 @@ public class UserProfileResponse {
     private Gender gender;
     private LocalDate dateOfBirth;
     private String location;
+    private LocalDateTime profileUpdatedAt; // For cache busting
 }

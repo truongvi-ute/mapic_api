@@ -11,4 +11,5 @@ public interface IUserService {
     UserProfileResponse updateProfile(String username, UpdateProfileRequest request);
     String uploadAvatar(String username, MultipartFile file);
     String uploadCoverImage(String username, MultipartFile file);
+    void savePushToken(String username, String pushToken);
 }

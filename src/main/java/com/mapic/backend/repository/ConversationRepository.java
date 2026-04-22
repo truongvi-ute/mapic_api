@@ -26,5 +26,5 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
         AND EXISTS (SELECT p FROM Participant p WHERE p.conversation = c AND p.user = :user1)
         AND EXISTS (SELECT p FROM Participant p WHERE p.conversation = c AND p.user = :user2)
     """)
-    Optional<Conversation> findDirectConversation(@Param("user1") User user1, @Param("user2") User user2);
+    List<Conversation> findDirectConversation(@Param("user1") User user1, @Param("user2") User user2);
 }

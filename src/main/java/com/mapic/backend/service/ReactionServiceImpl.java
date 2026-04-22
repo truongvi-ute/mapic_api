@@ -6,12 +6,14 @@ import com.mapic.backend.entity.Moment;
 import com.mapic.backend.entity.Reaction;
 import com.mapic.backend.entity.ReactionType;
 import com.mapic.backend.entity.User;
+import com.mapic.backend.entity.NotificationType;
 import com.mapic.backend.exception.NotFoundException;
 import com.mapic.backend.exception.ValidationException;
 import com.mapic.backend.repository.CommentRepository;
 import com.mapic.backend.repository.MomentRepository;
 import com.mapic.backend.repository.ReactionRepository;
 import com.mapic.backend.repository.UserRepository;
+import com.mapic.backend.service.INotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,6 +31,7 @@ public class ReactionServiceImpl implements IReactionService {
     private final MomentRepository momentRepository;
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
+    private final INotificationService notificationService;
 
     // Moment chỉ cho phép HEART
     private static final Set<ReactionType> ALLOWED_MOMENT_REACTIONS = Set.of(ReactionType.HEART);
@@ -86,6 +89,9 @@ public class ReactionServiceImpl implements IReactionService {
 
         Reaction saved = reactionRepository.save(newReaction);
         log.info("Added reaction {} to moment {} by user {}", type, momentId, username);
+
+        // Notify moment author
+        notificationService.createNotification(user, moment.getAuthor(), NotificationType.MOMENT_REACTION, "MOMENT", moment.getId());
         
         return mapToDTO(saved);
     }
