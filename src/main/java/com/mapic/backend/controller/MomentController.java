@@ -6,6 +6,7 @@ import com.mapic.backend.dto.response.MomentResponse;
 import com.mapic.backend.dto.response.PageResponse;
 import com.mapic.backend.entity.Moment;
 import com.mapic.backend.entity.User;
+import com.mapic.backend.repository.ReactionRepository;
 import com.mapic.backend.repository.UserRepository;
 import com.mapic.backend.service.IMomentService;
 import com.mapic.backend.dto.ApiResponse;
@@ -33,6 +34,7 @@ public class MomentController {
     private final IMomentService momentService;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final ReactionRepository reactionRepository;
 
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<ApiResponse<MomentResponse>> createMoment(
@@ -112,7 +114,11 @@ public class MomentController {
         Page<Moment> momentsPage = momentService.getFeedMoments(user.getId(), pageable);
         
         List<MomentResponse> responses = momentsPage.getContent().stream()
-                .map(MomentResponse::fromEntity)
+                .map(moment -> {
+                    long reactionCount = reactionRepository.countByMoment(moment);
+                    boolean userReacted = reactionRepository.existsByUserAndMoment(user, moment);
+                    return MomentResponse.fromEntityWithReaction(moment, reactionCount, userReacted);
+                })
                 .collect(Collectors.toList());
 
         PageResponse<MomentResponse> pageResponse = PageResponse.<MomentResponse>builder()
@@ -146,11 +152,19 @@ public class MomentController {
             size = 50;
         }
 
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         Pageable pageable = PageRequest.of(page, size);
         Page<Moment> momentsPage = momentService.exploreMoments(provinceId, category, sort, pageable);
         
         List<MomentResponse> responses = momentsPage.getContent().stream()
-                .map(MomentResponse::fromEntity)
+                .map(moment -> {
+                    long reactionCount = reactionRepository.countByMoment(moment);
+                    boolean userReacted = reactionRepository.existsByUserAndMoment(currentUser, moment);
+                    return MomentResponse.fromEntityWithReaction(moment, reactionCount, userReacted);
+                })
                 .collect(Collectors.toList());
 
         PageResponse<MomentResponse> pageResponse = PageResponse.<MomentResponse>builder()

@@ -28,6 +28,8 @@ public class MomentResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<MediaInfo> media;
+    private Long reactionCount;
+    private Boolean userReacted;
 
     @Data
     @Builder
@@ -94,6 +96,10 @@ public class MomentResponse {
     }
 
     public static MomentResponse fromEntity(Moment moment) {
+        return fromEntityWithReaction(moment, 0L, false);
+    }
+
+    public static MomentResponse fromEntityWithReaction(Moment moment, long reactionCount, boolean userReacted) {
         return MomentResponse.builder()
                 .id(moment.getId())
                 .content(moment.getContent())
@@ -140,6 +146,8 @@ public class MomentResponse {
                                 .sortOrder(m.getSortOrder())
                                 .build())
                         .collect(Collectors.toList()) : null)
+                .reactionCount(reactionCount)
+                .userReacted(userReacted)
                 .build();
     }
 }
