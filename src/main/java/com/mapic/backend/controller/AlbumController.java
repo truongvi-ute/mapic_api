@@ -165,4 +165,26 @@ public class AlbumController {
                     .body(new ApiResponse<>(false, "Lỗi bỏ lưu moment khỏi album", null));
         }
     }
+
+    @PutMapping("/{albumId}/moments/{momentId}/reorder")
+    public ResponseEntity<ApiResponse<AlbumDto>> reorderMoment(
+            @PathVariable Long albumId,
+            @PathVariable Long momentId,
+            @RequestParam String direction,
+            Authentication authentication) {
+        try {
+            String username = authentication.getName();
+            User user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            AlbumDto albumDto = albumService.reorderAlbumItem(albumId, momentId, direction, user.getId());
+            return ResponseEntity.ok(new ApiResponse<>(true, "Cập nhật thứ tự thành công", albumDto));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, "Lỗi khi sắp xếp moment", null));
+        }
+    }
 }
