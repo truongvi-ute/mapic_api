@@ -187,4 +187,28 @@ public class AlbumController {
                     .body(new ApiResponse<>(false, "Lỗi khi sắp xếp moment", null));
         }
     }
+
+    /**
+     * Save (copy) someone else's shared album into current user's albums.
+     * Creates a new album with the same title/description and copies all moments.
+     */
+    @PostMapping("/{albumId}/save")
+    public ResponseEntity<ApiResponse<AlbumDto>> saveSharedAlbum(
+            @PathVariable Long albumId,
+            Authentication authentication) {
+        try {
+            String username = authentication.getName();
+            User user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            AlbumDto albumDto = albumService.saveSharedAlbum(albumId, user.getId());
+            return ResponseEntity.ok(new ApiResponse<>(true, "Đã lưu album vào bộ sưu tập của bạn", albumDto));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, "Lỗi khi lưu album", null));
+        }
+    }
 }

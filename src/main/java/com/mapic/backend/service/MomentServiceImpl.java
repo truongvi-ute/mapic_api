@@ -30,6 +30,7 @@ public class MomentServiceImpl implements IMomentService {
     private final IStorageService storageService;
     private final OpenCageService openCageService;
     private final ReactionRepository reactionRepository;
+    private final CommentRepository commentRepository;
 
     @Override
     @Transactional
@@ -180,7 +181,7 @@ public class MomentServiceImpl implements IMomentService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Moment> exploreMoments(String provinceId, String category, String sort, Pageable pageable) {
+    public Page<Moment> exploreMoments(Integer provinceId, String category, String sort, Pageable pageable) {
         log.info("Exploring moments with filters - province: {}, category: {}, sort: {}", 
                  provinceId, category, sort);
         
@@ -188,6 +189,11 @@ public class MomentServiceImpl implements IMomentService {
         // TODO: Implement like/comment counting to enable popular sorting
         
         return momentRepository.exploreMoments(provinceId, category, pageable);
+    }
+
+    @Override
+    public Moment getMomentById(Long momentId) {
+        return momentRepository.findById(momentId).orElse(null);
     }
 
     @Override
@@ -253,8 +259,9 @@ public class MomentServiceImpl implements IMomentService {
                         .build())
                 .collect(java.util.stream.Collectors.toList());
 
-        // Count reactions
+        // Count reactions and comments
         long reactionCount = reactionRepository.countByMoment(moment);
+        long commentCount = commentRepository.countByMoment(moment);
 
         // Check if current user reacted
         boolean userReacted = false;
@@ -280,6 +287,7 @@ public class MomentServiceImpl implements IMomentService {
                 .media(mediaDtos)
                 .reactionCount(reactionCount)
                 .userReacted(userReacted)
+                .commentCount(commentCount)
                 .build();
     }
 }

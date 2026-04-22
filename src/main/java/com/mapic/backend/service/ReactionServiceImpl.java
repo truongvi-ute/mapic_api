@@ -1,12 +1,14 @@
 package com.mapic.backend.service;
 
 import com.mapic.backend.dto.ReactionDTO;
+import com.mapic.backend.entity.Comment;
 import com.mapic.backend.entity.Moment;
 import com.mapic.backend.entity.Reaction;
 import com.mapic.backend.entity.ReactionType;
 import com.mapic.backend.entity.User;
 import com.mapic.backend.exception.NotFoundException;
 import com.mapic.backend.exception.ValidationException;
+import com.mapic.backend.repository.CommentRepository;
 import com.mapic.backend.repository.MomentRepository;
 import com.mapic.backend.repository.ReactionRepository;
 import com.mapic.backend.repository.UserRepository;
@@ -25,6 +27,7 @@ public class ReactionServiceImpl implements IReactionService {
 
     private final ReactionRepository reactionRepository;
     private final MomentRepository momentRepository;
+    private final CommentRepository commentRepository;
     private final UserRepository userRepository;
 
     // Moment chỉ cho phép HEART
@@ -109,12 +112,74 @@ public class ReactionServiceImpl implements IReactionService {
         return reactionRepository.countByMoment(moment);
     }
 
+    @Override
+    @Transactional
+    public ReactionDTO toggleCommentReaction(Long commentId, ReactionType type) {
+        if (!ALLOWED_COMMENT_MESSAGE_REACTIONS.contains(type)) {
+            throw new ValidationException("Reaction type not allowed for comments.");
+        }
+
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new NotFoundException("Comment not found with id: " + commentId));
+
+        var existingReaction = reactionRepository.findByUserAndComment(user, comment);
+
+        if (existingReaction.isPresent()) {
+            Reaction reaction = existingReaction.get();
+            if (reaction.getType() == type) {
+                reactionRepository.delete(reaction);
+                log.info("Removed reaction {} from comment {} by user {}", type, commentId, username);
+                return null;
+            }
+            reaction.setType(type);
+            Reaction updated = reactionRepository.save(reaction);
+            log.info("Updated reaction to {} on comment {} by user {}", type, commentId, username);
+            return mapToDTO(updated);
+        }
+
+        Reaction newReaction = Reaction.builder()
+                .user(user)
+                .comment(comment)
+                .type(type)
+                .build();
+
+        Reaction saved = reactionRepository.save(newReaction);
+        log.info("Added reaction {} to comment {} by user {}", type, commentId, username);
+        return mapToDTO(saved);
+    }
+
+    @Override
+    @Transactional
+    public void removeCommentReaction(Long commentId) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new NotFoundException("Comment not found with id: " + commentId));
+
+        reactionRepository.deleteByUserAndComment(user, comment);
+        log.info("Removed reaction from comment {} by user {}", commentId, username);
+    }
+
+    @Override
+    public long getCommentReactionCount(Long commentId) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new NotFoundException("Comment not found with id: " + commentId));
+        return reactionRepository.countByComment(comment);
+    }
+
     private ReactionDTO mapToDTO(Reaction reaction) {
         return ReactionDTO.builder()
                 .id(reaction.getId())
                 .userId(reaction.getUser().getId())
                 .username(reaction.getUser().getUsername())
-                .momentId(reaction.getMoment().getId())
+                .momentId(reaction.getMoment() != null ? reaction.getMoment().getId() : null)
+                // Add commentId support later if ReactionDTO is updated, but currently we just avoid null pointer
                 .type(reaction.getType())
                 .createdAt(reaction.getCreatedAt())
                 .build();

@@ -61,18 +61,18 @@ public class LocationServiceImpl implements ILocationService {
                     API_URL,
                     HttpMethod.GET,
                     null,
-                    new ParameterizedTypeReference<List<ProvinceDTO>>() {}
-            );
+                    new ParameterizedTypeReference<List<ProvinceDTO>>() {
+                    });
 
             List<ProvinceDTO> provinces = response.getBody();
-            if (provinces == null) return;
+            if (provinces == null)
+                return;
 
             // Only seed Hanoi (1) and HCM (79) as samples for now
             List<Integer> targetProvinceCodes = List.of(1, 79);
 
             for (ProvinceDTO pDto : provinces) {
-                if (!targetProvinceCodes.contains(pDto.getCode())) continue;
-
+                // Luôn lưu Tỉnh/Thành
                 Province province = provinceRepository.findById(pDto.getCode())
                         .orElseGet(() -> provinceRepository.save(Province.builder()
                                 .id(pDto.getCode())
@@ -81,34 +81,41 @@ public class LocationServiceImpl implements ILocationService {
                                 .region(pDto.getDivisionType())
                                 .build()));
 
-                if (pDto.getDistricts() != null) {
-                    for (var dDto : pDto.getDistricts()) {
-                        District district = districtRepository.findById(dDto.getCode())
-                                .orElseGet(() -> districtRepository.save(District.builder()
-                                        .id(dDto.getCode())
-                                        .name(dDto.getName())
-                                        .code(dDto.getCodename())
-                                        .province(province)
-                                        .build()));
+                // Chỉ nạp chi tiết Quận/Huyện/Xã cho các tỉnh nằm trong danh sách mục tiêu
+                if (targetProvinceCodes.contains(pDto.getCode())) {
+                    if (pDto.getDistricts() != null) {
+                        for (var dDto : pDto.getDistricts()) {
+                            District district = districtRepository.findById(dDto.getCode())
+                                    .orElseGet(() -> districtRepository.save(District.builder()
+                                            .id(dDto.getCode())
+                                            .name(dDto.getName())
+                                            .code(dDto.getCodename())
+                                            .province(province)
+                                            .build()));
 
-                        if (dDto.getWards() != null) {
-                            for (var cDto : dDto.getWards()) {
-                                if (!communeRepository.existsById(cDto.getCode())) {
-                                    communeRepository.save(Commune.builder()
-                                            .id(cDto.getCode())
-                                            .name(cDto.getName())
-                                            .code(cDto.getCodename())
-                                            .district(district)
-                                            .build());
+                            if (dDto.getWards() != null) {
+                                for (var cDto : dDto.getWards()) {
+                                    try {
+                                        if (!communeRepository.existsById(cDto.getCode())) {
+                                            communeRepository.save(Commune.builder()
+                                                    .id(cDto.getCode())
+                                                    .name(cDto.getName())
+                                                    .code(cDto.getCodename())
+                                                    .district(district)
+                                                    .build());
+                                        }
+                                    } catch (Exception e) {
+                                        log.error("Failed to seed commune {}: {}", cDto.getName(), e.getMessage());
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-            log.info("Location seeding completed for target provinces.");
+            log.info("Location seeding completed. Seeded all provinces and details for target provinces.");
         } catch (Exception e) {
-            log.error("Error seeding locations: {}", e.getMessage());
+            log.error("Critical error during location seeding: {}", e.getMessage(), e);
         }
     }
 }

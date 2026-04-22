@@ -15,6 +15,7 @@ public interface IMomentService {
     List<Moment> getMomentsByAuthor(Long authorId);
     List<Moment> getMomentsByUser(Long userId, Long currentUserId);
     Page<Moment> getFeedMoments(Long userId, Pageable pageable);
-    Page<Moment> exploreMoments(String provinceId, String category, String sort, Pageable pageable);
+    Page<Moment> exploreMoments(Integer provinceId, String category, String sort, Pageable pageable);
     MomentDto convertToDto(Moment moment, Long currentUserId);
+    Moment getMomentById(Long momentId);
 }

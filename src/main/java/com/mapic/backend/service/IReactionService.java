@@ -24,4 +24,8 @@ public interface IReactionService {
      * Get reaction count for a moment
      */
     long getReactionCount(Long momentId);
+
+    ReactionDTO toggleCommentReaction(Long commentId, ReactionType type);
+    void removeCommentReaction(Long commentId);
+    long getCommentReactionCount(Long commentId);
 }

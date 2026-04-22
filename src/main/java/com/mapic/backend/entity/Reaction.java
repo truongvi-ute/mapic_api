@@ -20,8 +20,12 @@ public class Reaction {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "moment_id", nullable = false)
+    @JoinColumn(name = "moment_id", nullable = true)
     private Moment moment;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "comment_id", nullable = true)
+    private Comment comment;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -33,5 +37,17 @@ public class Reaction {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        validateTarget();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        validateTarget();
+    }
+
+    private void validateTarget() {
+        if ((moment == null && comment == null) || (moment != null && comment != null)) {
+            throw new IllegalStateException("Reaction must belong to exactly one target (moment or comment)");
+        }
     }
 }

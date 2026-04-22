@@ -6,6 +6,7 @@ import com.mapic.backend.dto.response.MomentResponse;
 import com.mapic.backend.dto.response.PageResponse;
 import com.mapic.backend.entity.Moment;
 import com.mapic.backend.entity.User;
+import com.mapic.backend.repository.CommentRepository;
 import com.mapic.backend.repository.ReactionRepository;
 import com.mapic.backend.repository.UserRepository;
 import com.mapic.backend.service.IMomentService;
@@ -35,6 +36,7 @@ public class MomentController {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final ReactionRepository reactionRepository;
+    private final CommentRepository commentRepository;
 
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<ApiResponse<MomentResponse>> createMoment(
@@ -72,7 +74,12 @@ public class MomentController {
 
         List<Moment> moments = momentService.getMomentsByAuthor(author.getId());
         List<MomentResponse> responses = moments.stream()
-                .map(MomentResponse::fromEntity)
+                .map(moment -> {
+                    long reactionCount = reactionRepository.countByMoment(moment);
+                    boolean userReacted = reactionRepository.existsByUserAndMoment(author, moment);
+                    long commentCount = commentRepository.countByMoment(moment);
+                    return MomentResponse.fromEntityWithReactionAndComment(moment, reactionCount, userReacted, commentCount);
+                })
                 .collect(Collectors.toList());
         
         return ResponseEntity.ok(ApiResponse.success("Fetched my moments", responses));
@@ -88,7 +95,12 @@ public class MomentController {
 
         List<Moment> moments = momentService.getMomentsByUser(userId, currentUser.getId());
         List<MomentResponse> responses = moments.stream()
-                .map(MomentResponse::fromEntity)
+                .map(moment -> {
+                    long reactionCount = reactionRepository.countByMoment(moment);
+                    boolean userReacted = reactionRepository.existsByUserAndMoment(currentUser, moment);
+                    long commentCount = commentRepository.countByMoment(moment);
+                    return MomentResponse.fromEntityWithReactionAndComment(moment, reactionCount, userReacted, commentCount);
+                })
                 .collect(Collectors.toList());
         
         return ResponseEntity.ok(ApiResponse.success("Fetched user moments", responses));
@@ -117,7 +129,8 @@ public class MomentController {
                 .map(moment -> {
                     long reactionCount = reactionRepository.countByMoment(moment);
                     boolean userReacted = reactionRepository.existsByUserAndMoment(user, moment);
-                    return MomentResponse.fromEntityWithReaction(moment, reactionCount, userReacted);
+                    long commentCount = commentRepository.countByMoment(moment);
+                    return MomentResponse.fromEntityWithReactionAndComment(moment, reactionCount, userReacted, commentCount);
                 })
                 .collect(Collectors.toList());
 
@@ -140,7 +153,7 @@ public class MomentController {
     public ResponseEntity<ApiResponse<PageResponse<MomentResponse>>> exploreMoments(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String provinceId,
+            @RequestParam(required = false) Integer provinceId,
             @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "newest") String sort) {
         
@@ -163,7 +176,8 @@ public class MomentController {
                 .map(moment -> {
                     long reactionCount = reactionRepository.countByMoment(moment);
                     boolean userReacted = reactionRepository.existsByUserAndMoment(currentUser, moment);
-                    return MomentResponse.fromEntityWithReaction(moment, reactionCount, userReacted);
+                    long commentCount = commentRepository.countByMoment(moment);
+                    return MomentResponse.fromEntityWithReactionAndComment(moment, reactionCount, userReacted, commentCount);
                 })
                 .collect(Collectors.toList());
 
@@ -180,5 +194,26 @@ public class MomentController {
                 .build();
 
         return ResponseEntity.ok(ApiResponse.success("Explored moments", pageResponse));
+    }
+
+    @GetMapping("/{momentId}")
+    public ResponseEntity<ApiResponse<MomentResponse>> getMomentById(@PathVariable Long momentId) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Moment moment = momentService.getMomentById(momentId);
+        if (moment == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Moment not found"));
+        }
+
+        long reactionCount = reactionRepository.countByMoment(moment);
+        boolean userReacted = reactionRepository.existsByUserAndMoment(currentUser, moment);
+        long commentCount = commentRepository.countByMoment(moment);
+        MomentResponse response = MomentResponse.fromEntityWithReactionAndComment(
+                moment, reactionCount, userReacted, commentCount);
+
+        return ResponseEntity.ok(ApiResponse.success("Moment details", response));
     }
 }

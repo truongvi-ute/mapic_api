@@ -30,6 +30,7 @@ public class MomentResponse {
     private List<MediaInfo> media;
     private Long reactionCount;
     private Boolean userReacted;
+    private Long commentCount;
 
     @Data
     @Builder
@@ -96,10 +97,14 @@ public class MomentResponse {
     }
 
     public static MomentResponse fromEntity(Moment moment) {
-        return fromEntityWithReaction(moment, 0L, false);
+        return fromEntityWithReactionAndComment(moment, 0L, false, 0L);
     }
 
     public static MomentResponse fromEntityWithReaction(Moment moment, long reactionCount, boolean userReacted) {
+        return fromEntityWithReactionAndComment(moment, reactionCount, userReacted, 0L);
+    }
+
+    public static MomentResponse fromEntityWithReactionAndComment(Moment moment, long reactionCount, boolean userReacted, long commentCount) {
         return MomentResponse.builder()
                 .id(moment.getId())
                 .content(moment.getContent())
@@ -148,6 +153,7 @@ public class MomentResponse {
                         .collect(Collectors.toList()) : null)
                 .reactionCount(reactionCount)
                 .userReacted(userReacted)
+                .commentCount(commentCount)
                 .build();
     }
 }

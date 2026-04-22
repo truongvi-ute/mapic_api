@@ -208,6 +208,54 @@ public class AlbumService {
         return getAlbumDetails(albumId, userId);
     }
 
+    /**
+     * Copy a shared album (from any user) into the current user's albums.
+     * Creates a new album with same title/description and adds all moments from the source.
+     */
+    @Transactional
+    public AlbumDto saveSharedAlbum(Long sourceAlbumId, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Load source album — any album is accessible for saving (it was shared)
+        Album source = albumRepository.findById(sourceAlbumId)
+                .orElseThrow(() -> new RuntimeException("Album not found"));
+
+        // Don't let user save their own album
+        if (source.getAuthor().getId().equals(userId)) {
+            throw new RuntimeException("Đây là album của bạn");
+        }
+
+        // Build a unique title (append copy suffix if name already exists)
+        String baseTitle = source.getTitle();
+        String title = baseTitle;
+        int suffix = 1;
+        while (albumRepository.existsByTitleAndAuthor(title, user)) {
+            title = baseTitle + " (" + suffix++ + ")";
+        }
+
+        Album newAlbum = Album.builder()
+                .title(title)
+                .description(source.getDescription())
+                .author(user)
+                .isPrivate(false)
+                .build();
+        newAlbum = albumRepository.save(newAlbum);
+
+        // Copy all moments from source album
+        List<AlbumItem> sourceItems = albumItemRepository.findByAlbumOrderBySortOrderAsc(source);
+        for (AlbumItem item : sourceItems) {
+            AlbumItem copy = AlbumItem.builder()
+                    .album(newAlbum)
+                    .moment(item.getMoment())
+                    .sortOrder(item.getSortOrder())
+                    .build();
+            albumItemRepository.save(copy);
+        }
+
+        return convertToDtoWithoutMoments(newAlbum);
+    }
+
     private AlbumDto convertToDtoWithoutMoments(Album album) {
         long count = albumItemRepository.countByAlbum(album);
         

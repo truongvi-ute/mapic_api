@@ -72,7 +72,7 @@ public interface MomentRepository extends JpaRepository<Moment, Long> {
            "AND (:category IS NULL OR m.category = :category) " +
            "ORDER BY m.createdAt DESC")
     Page<Moment> exploreMoments(
-            @Param("provinceId") String provinceId,
+            @Param("provinceId") Integer provinceId,
             @Param("category") String category,
             Pageable pageable
     );

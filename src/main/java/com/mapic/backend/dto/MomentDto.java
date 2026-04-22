@@ -27,6 +27,7 @@ public class MomentDto {
     private List<MediaDto> media;
     private Long reactionCount;
     private Boolean userReacted;
+    private Long commentCount;
 
     @Data
     @Builder
