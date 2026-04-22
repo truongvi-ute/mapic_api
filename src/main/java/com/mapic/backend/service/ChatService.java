@@ -108,6 +108,50 @@ public class ChatService {
     }
 
     @Transactional
+    public ConversationDto addMembersToGroup(Long conversationId, Long requesterId, List<Long> memberIds) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Cuộc trò chuyện không tồn tại"));
+
+        if (!conv.getIsGroup()) {
+            throw new RuntimeException("Chỉ có thể thêm thành viên vào nhóm");
+        }
+
+        if (!conv.getCreator().getId().equals(requesterId)) {
+            throw new RuntimeException("Chỉ trưởng nhóm mới có thể thêm thành viên");
+        }
+
+        if (memberIds == null || memberIds.isEmpty()) {
+            throw new RuntimeException("Danh sách thành viên không được rỗng");
+        }
+
+        // Validate all members are friends with creator
+        for (Long memberId : memberIds) {
+            if (!friendshipRepository.existsFriendshipBetweenUsers(requesterId, memberId)) {
+                User m = getUser(memberId);
+                throw new RuntimeException("Người dùng " + m.getUsername() + " chưa là bạn bè của bạn");
+            }
+
+            // Check if already a member
+            if (participantRepository.existsByConversationIdAndUserId(conversationId, memberId)) {
+                User m = getUser(memberId);
+                throw new RuntimeException("Người dùng " + m.getUsername() + " đã là thành viên của nhóm");
+            }
+        }
+
+        // Add members
+        for (Long memberId : memberIds) {
+            User member = getUser(memberId);
+            participantRepository.save(Participant.builder()
+                    .conversation(conv)
+                    .user(member)
+                    .role("MEMBER")
+                    .build());
+        }
+
+        return toConversationDto(conv, requesterId);
+    }
+
+    @Transactional
     public void removeMemberFromGroup(Long conversationId, Long requesterId, Long targetUserId) {
         Conversation conv = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new RuntimeException("Cuộc trò chuyện không tồn tại"));

@@ -54,6 +54,20 @@ public class ChatController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Tạo nhóm thành công", dto));
     }
 
+    @PostMapping("/rooms/{roomId}/members")
+    public ResponseEntity<ApiResponse<ConversationDto>> addMembers(
+            @PathVariable Long roomId,
+            @RequestBody Map<String, Object> body,
+            Authentication auth) {
+        User me = getUser(auth);
+        @SuppressWarnings("unchecked")
+        List<Integer> rawIds = (List<Integer>) body.get("memberIds");
+        List<Long> memberIds = rawIds.stream().map(Long::valueOf).toList();
+
+        ConversationDto dto = chatService.addMembersToGroup(roomId, me.getId(), memberIds);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Đã thêm thành viên", dto));
+    }
+
     @DeleteMapping("/rooms/{roomId}/members/{userId}")
     public ResponseEntity<ApiResponse<Void>> removeMember(
             @PathVariable Long roomId, @PathVariable Long userId, Authentication auth) {
