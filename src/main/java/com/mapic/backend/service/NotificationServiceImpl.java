@@ -172,7 +172,7 @@ public class NotificationServiceImpl implements INotificationService {
         try {
             NotificationDTO dto = convertToDTO(notification);
             messagingTemplate.convertAndSendToUser(
-                    String.valueOf(notification.getRecipient().getId()),
+                    notification.getRecipient().getUsername(),  // Sử dụng username thay vì userId
                     "/queue/notifications",
                     dto
             );

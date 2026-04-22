@@ -67,8 +67,8 @@ public class LocationController {
 
         // 4. Fetch friend list
         List<Friendship> friendships = friendshipRepository.findAllFriendsByUserId(user.getId());
-        List<Long> friendIds = friendships.stream()
-                .map(f -> f.getUser1().getId().equals(user.getId()) ? f.getUser2().getId() : f.getUser1().getId())
+        List<User> friends = friendships.stream()
+                .map(f -> f.getUser1().getId().equals(user.getId()) ? f.getUser2() : f.getUser1())
                 .toList();
 
         // 5. Prepare broadcast payload
@@ -78,9 +78,9 @@ public class LocationController {
                 location.latitude());
 
         // 6. Fire to each friend's personal queue
-        for (Long friendId : friendIds) {
+        for (User friend : friends) {
             messagingTemplate.convertAndSendToUser(
-                    String.valueOf(friendId),
+                    friend.getUsername(),  // Sử dụng username thay vì userId
                     "/queue/location",
                     broadcastMessage);
         }

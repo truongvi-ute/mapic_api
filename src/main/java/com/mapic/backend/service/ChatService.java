@@ -367,6 +367,27 @@ public class ChatService {
         return dto;
     }
 
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getReactionDetails(Long messageId) {
+        Message msg = messageRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("Tin nhắn không tồn tại"));
+
+        List<MessageReaction> reactions = messageReactionRepository.findByMessage(msg);
+        
+        return reactions.stream()
+                .map(r -> {
+                    Map<String, Object> detail = new java.util.HashMap<>();
+                    detail.put("userId", r.getUser().getId());
+                    detail.put("username", r.getUser().getUsername());
+                    detail.put("fullName", r.getUser().getName());
+                    detail.put("avatarUrl", r.getUser().getUserProfile() != null 
+                            ? r.getUser().getUserProfile().getAvatarUrl() : null);
+                    detail.put("emoji", r.getEmoji());
+                    return detail;
+                })
+                .collect(Collectors.toList());
+    }
+
     // ─────────────────── Helpers ───────────────────
 
     private void broadcastToConversation(Conversation conv, MessageDto dto) {

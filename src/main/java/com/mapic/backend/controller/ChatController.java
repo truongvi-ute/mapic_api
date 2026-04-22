@@ -177,6 +177,15 @@ public class ChatController {
         return ResponseEntity.ok(new ApiResponse<>(true, "OK", dto));
     }
 
+    @GetMapping("/messages/{messageId}/reactions")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getReactionDetails(
+            @PathVariable Long messageId,
+            Authentication auth) {
+        User me = getUser(auth);
+        List<Map<String, Object>> details = chatService.getReactionDetails(messageId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "OK", details));
+    }
+
     // ─── Helpers ───
 
     private User getUser(Authentication auth) {
