@@ -18,6 +18,9 @@ public class Conversation {
     @Column(length = 100)
     private String title;
 
+    @Column(name = "group_avatar_url", length = 500)
+    private String groupAvatarUrl; // Avatar for group chats
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean isGroup = false;

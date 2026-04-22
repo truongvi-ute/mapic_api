@@ -195,6 +195,38 @@ public class ChatService {
     }
 
     @Transactional
+    public ConversationDto updateGroupAvatar(Long conversationId, Long requesterId, org.springframework.web.multipart.MultipartFile file) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Cuộc trò chuyện không tồn tại"));
+
+        if (!conv.getIsGroup()) {
+            throw new RuntimeException("Chỉ có thể cập nhật ảnh cho nhóm");
+        }
+        if (!conv.getCreator().getId().equals(requesterId)) {
+            throw new RuntimeException("Chỉ trưởng nhóm mới có thể cập nhật ảnh");
+        }
+
+        // Delete old avatar if exists
+        if (conv.getGroupAvatarUrl() != null && !conv.getGroupAvatarUrl().isEmpty()) {
+            try {
+                // Assuming you have a storage service
+                // storageService.delete(conv.getGroupAvatarUrl(), "group-avatars");
+            } catch (Exception e) {
+                // Log error but continue
+            }
+        }
+
+        // Upload new avatar
+        // String filename = storageService.store(file, "group-avatars");
+        // For now, just use a placeholder or implement storage service
+        String filename = "group-avatar-" + conversationId + "-" + System.currentTimeMillis() + ".jpg";
+        
+        conv.setGroupAvatarUrl(filename);
+        conversationRepository.save(conv);
+        return toConversationDto(conv, requesterId);
+    }
+
+    @Transactional
     public void deleteGroup(Long conversationId, Long requesterId) {
         Conversation conv = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new RuntimeException("Cuộc trò chuyện không tồn tại"));
@@ -385,6 +417,7 @@ public class ChatService {
                 .orElse(null);
 
         String avatarUrl = null;
+        String senderName = msg.getSender().getName(); // Get full name
         if (msg.getSender().getUserProfile() != null) {
             avatarUrl = msg.getSender().getUserProfile().getAvatarUrl();
         }
@@ -394,6 +427,7 @@ public class ChatService {
                 .conversationId(msg.getConversation().getId())
                 .senderId(msg.getSender().getId())
                 .senderUsername(msg.getSender().getUsername())
+                .senderName(senderName) // Add full name
                 .senderAvatarUrl(avatarUrl)
                 .type(msg.getType().name())
                 .reactions(reactionCounts)
@@ -461,6 +495,7 @@ public class ChatService {
                 .id(conv.getId())
                 .isGroup(conv.getIsGroup())
                 .title(conv.getTitle())
+                .groupAvatarUrl(conv.getGroupAvatarUrl()) // Add group avatar
                 .creatorId(conv.getCreator() != null ? conv.getCreator().getId() : null)
                 .createdAt(conv.getCreatedAt())
                 .lastMessage(lastMsgDto)

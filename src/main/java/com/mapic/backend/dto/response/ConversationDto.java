@@ -14,6 +14,7 @@ public class ConversationDto {
     @JsonProperty("isGroup")
     private boolean isGroup;
     private String title;        // null for 1-1 chats
+    private String groupAvatarUrl; // Avatar URL for group chats
     private Long creatorId;
     private LocalDateTime createdAt;
     private MessageDto lastMessage;

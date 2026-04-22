@@ -14,6 +14,7 @@ public class MessageDto {
     private Long conversationId;
     private Long senderId;
     private String senderUsername;
+    private String senderName; // Full name of sender
     private String senderAvatarUrl;
     private String type; // TEXT, SHARE_MOMENT, SHARE_ALBUM
     private String content;

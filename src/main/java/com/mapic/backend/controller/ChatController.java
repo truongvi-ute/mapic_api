@@ -12,6 +12,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 import java.util.List;
@@ -84,6 +85,16 @@ public class ChatController {
         User me = getUser(auth);
         ConversationDto dto = chatService.renameGroup(roomId, me.getId(), body.get("title"));
         return ResponseEntity.ok(new ApiResponse<>(true, "Đã đổi tên nhóm", dto));
+    }
+
+    @PutMapping("/rooms/{roomId}/avatar")
+    public ResponseEntity<ApiResponse<ConversationDto>> updateGroupAvatar(
+            @PathVariable Long roomId,
+            @RequestParam("file") MultipartFile file,
+            Authentication auth) {
+        User me = getUser(auth);
+        ConversationDto dto = chatService.updateGroupAvatar(roomId, me.getId(), file);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Đã cập nhật ảnh nhóm", dto));
     }
 
     @DeleteMapping("/rooms/{roomId}")
