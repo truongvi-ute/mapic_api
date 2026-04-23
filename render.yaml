@@ -1,0 +1,64 @@
+services:
+  # Backend Web Service
+  - type: web
+    name: mapic-backend-ute
+    runtime: docker
+    plan: free
+    envVars:
+      - key: RENDER_DB_URL
+        fromDatabase:
+          name: mapic-db
+          property: connectionString
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mapic-db
+          property: connectionString
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: mapic-redis-ute
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: mapic-redis-ute
+          property: port
+      - key: REDIS_PASSWORD
+        value: ""
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: mapic-redis-ute
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: update
+      - key: DB_PASSWORD
+        sync: false
+      - key: BREVO_SMTP_USERNAME
+        sync: false
+      - key: BREVO_SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM_EMAIL
+        sync: false
+      - key: OPENCAGE_API_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+  # Redis Service
+  - type: redis
+    name: mapic-redis-ute
+    plan: free
+    ipAllowList: [] # Only allow internal connections
+
+databases:
+  - name: mapic-db
+    plan: free
+    databaseName: mapic_db
+    user: mapic_admin
