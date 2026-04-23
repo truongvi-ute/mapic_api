@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
 import javax.sql.DataSource;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 /**
  * Configuration for Render.com database connection
@@ -21,27 +23,33 @@ public class RenderDatabaseConfig {
     @Bean
     @Primary
     @ConditionalOnProperty(name = "DATABASE_URL")
-    public DataSource renderDataSource() {
+    public DataSource renderDataSource() throws URISyntaxException {
         String databaseUrl = System.getenv("DATABASE_URL");
         
         System.out.println("[DATABASE] Detected DATABASE_URL from Render");
+        System.out.println("[DATABASE] Raw URL: " + databaseUrl.replaceAll(":[^:@]+@", ":****@"));
         
-        // Render format: postgresql://user:pass@host:port/dbname
-        // JDBC format: jdbc:postgresql://host:port/dbname
+        // Parse the DATABASE_URL properly
+        URI dbUri = new URI(databaseUrl);
         
-        if (databaseUrl.startsWith("postgres://")) {
-            databaseUrl = databaseUrl.replace("postgres://", "postgresql://");
-        }
+        String username = dbUri.getUserInfo().split(":")[0];
+        String password = dbUri.getUserInfo().split(":")[1];
+        String host = dbUri.getHost();
+        int port = dbUri.getPort();
+        String database = dbUri.getPath().substring(1); // Remove leading '/'
         
-        if (!databaseUrl.startsWith("jdbc:")) {
-            databaseUrl = "jdbc:" + databaseUrl;
-        }
+        // Build JDBC URL
+        String jdbcUrl = String.format("jdbc:postgresql://%s:%d/%s", host, port, database);
         
-        System.out.println("[DATABASE] Using Render DATABASE_URL: " + databaseUrl.replaceAll(":[^:@]+@", ":****@"));
+        System.out.println("[DATABASE] JDBC URL: " + jdbcUrl);
+        System.out.println("[DATABASE] Username: " + username);
         
         return DataSourceBuilder
                 .create()
-                .url(databaseUrl)
+                .url(jdbcUrl)
+                .username(username)
+                .password(password)
+                .driverClassName("org.postgresql.Driver")
                 .build();
     }
 }
