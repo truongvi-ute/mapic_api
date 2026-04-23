@@ -33,6 +33,7 @@ public class SecurityConfig {
                 return corsConfiguration;
             }))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/", "/health", "/actuator/**").permitAll() // Allow health checks
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/admin/auth/**").permitAll() // Allow admin authentication
                 .requestMatchers("/api/provinces/**").permitAll()
