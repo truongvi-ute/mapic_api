@@ -26,8 +26,9 @@ public class RenderDatabaseConfig {
     public DataSource renderDataSource() throws URISyntaxException {
         String databaseUrl = System.getenv("DATABASE_URL");
         
-        System.out.println("[DATABASE] Detected DATABASE_URL from Render");
-        System.out.println("[DATABASE] Raw URL: " + databaseUrl.replaceAll(":[^:@]+@", ":****@"));
+        System.out.println("[DATABASE] ========== Render Database Configuration ==========");
+        System.out.println("[DATABASE] Raw DATABASE_URL length: " + (databaseUrl != null ? databaseUrl.length() : 0));
+        System.out.println("[DATABASE] Raw URL (masked): " + (databaseUrl != null ? databaseUrl.replaceAll(":[^:@]+@", ":****@") : "null"));
         
         // Parse the DATABASE_URL properly
         URI dbUri = new URI(databaseUrl);
@@ -35,14 +36,20 @@ public class RenderDatabaseConfig {
         String username = dbUri.getUserInfo().split(":")[0];
         String password = dbUri.getUserInfo().split(":")[1];
         String host = dbUri.getHost();
-        int port = dbUri.getPort();
+        int port = dbUri.getPort() > 0 ? dbUri.getPort() : 5432; // Default to 5432 if not specified
         String database = dbUri.getPath().substring(1); // Remove leading '/'
+        
+        System.out.println("[DATABASE] Parsed components:");
+        System.out.println("[DATABASE]   - Host: " + host);
+        System.out.println("[DATABASE]   - Port: " + port);
+        System.out.println("[DATABASE]   - Database: " + database);
+        System.out.println("[DATABASE]   - Username: " + username);
         
         // Build JDBC URL
         String jdbcUrl = String.format("jdbc:postgresql://%s:%d/%s", host, port, database);
         
-        System.out.println("[DATABASE] JDBC URL: " + jdbcUrl);
-        System.out.println("[DATABASE] Username: " + username);
+        System.out.println("[DATABASE] Final JDBC URL: " + jdbcUrl);
+        System.out.println("[DATABASE] ========================================");
         
         return DataSourceBuilder
                 .create()
