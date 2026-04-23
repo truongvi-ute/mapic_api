@@ -48,6 +48,7 @@ public class ReportService {
             .targetId(momentId)
             .targetType(ReportTargetType.MOMENT)
             .reason(request.getReason())
+            .reasonCategory(categorizeReason(request.getReason()))
             .status(ReportStatus.PENDING)
             .build();
         
@@ -76,6 +77,7 @@ public class ReportService {
             .targetId(commentId)
             .targetType(ReportTargetType.COMMENT)
             .reason(request.getReason())
+            .reasonCategory(categorizeReason(request.getReason()))
             .status(ReportStatus.PENDING)
             .build();
         
@@ -109,6 +111,7 @@ public class ReportService {
             .targetId(userId)
             .targetType(ReportTargetType.USER)
             .reason(request.getReason())
+            .reasonCategory(categorizeReason(request.getReason()))
             .status(ReportStatus.PENDING)
             .build();
         
@@ -136,5 +139,26 @@ public class ReportService {
             .status(report.getStatus().name())
             .createdAt(report.getCreatedAt())
             .build();
+    }
+    
+    // Helper method to categorize reasons
+    private ReportReasonCategory categorizeReason(String reason) {
+        if (reason == null) return ReportReasonCategory.OTHER;
+        
+        String r = reason.toLowerCase();
+        if (r.contains("spam") || r.contains("quảng cáo")) 
+            return ReportReasonCategory.SPAM;
+        if (r.contains("quấy rối") || r.contains("bắt nạt")) 
+            return ReportReasonCategory.HARASSMENT;
+        if (r.contains("bạo lực") || r.contains("violence")) 
+            return ReportReasonCategory.VIOLENCE;
+        if (r.contains("sai lệch") || r.contains("giả mạo") || r.contains("fake")) 
+            return ReportReasonCategory.FAKE_NEWS;
+        if (r.contains("thù ghét") || r.contains("phân biệt")) 
+            return ReportReasonCategory.HATE_SPEECH;
+        if (r.contains("không phù hợp") || r.contains("inappropriate") || r.contains("nude") || r.contains("khỏa thân")) 
+            return ReportReasonCategory.INAPPROPRIATE;
+        
+        return ReportReasonCategory.OTHER;
     }
 }

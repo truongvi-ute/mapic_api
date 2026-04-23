@@ -20,19 +20,34 @@ public class SOSAlert {
     private User sender;
 
     @Column(nullable = false)
-    private Double latitude;
+    private LocalDateTime triggeredAt;
 
+    private LocalDateTime resolvedAt;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    private SOSAlertStatus status;
+
+    private Double latitude;
     private Double longitude;
 
-    @Column(nullable = false)
-    private String status; // ACTIVE, RESOLVED, FALSE_ALARM
+    @Column(length = 500)
+    private String message;
 
-    @Column(nullable = false, updatable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private LocationStatus locationStatus;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
+        this.createdAt = now;
+        this.triggeredAt = now;
+        if (this.status == null) {
+            this.status = SOSAlertStatus.ACTIVE;
+        }
     }
 }

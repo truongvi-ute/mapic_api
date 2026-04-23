@@ -30,6 +30,10 @@ public class Report {
     private String reason;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "reason_category")
+    private ReportReasonCategory reasonCategory;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ReportStatus status;
 

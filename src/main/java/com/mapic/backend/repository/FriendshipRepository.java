@@ -20,9 +20,20 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
            "LEFT JOIN FETCH u1.userProfile " +
            "LEFT JOIN FETCH f.user2 u2 " +
            "LEFT JOIN FETCH u2.userProfile " +
-           "WHERE f.user1.id = :userId OR f.user2.id = :userId " +
+           "WHERE (f.user1.id = :userId OR f.user2.id = :userId) " +
+           "AND f.status = 'ACCEPTED' " +
            "ORDER BY f.createdAt DESC")
     List<Friendship> findAllFriendsByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT f FROM Friendship f " +
+           "LEFT JOIN FETCH f.user1 u1 " +
+           "LEFT JOIN FETCH u1.userProfile " +
+           "LEFT JOIN FETCH f.user2 u2 " +
+           "LEFT JOIN FETCH u2.userProfile " +
+           "WHERE (f.user1.id = :userId OR f.user2.id = :userId) " +
+           "AND f.status = 'ACCEPTED' " +
+           "AND f.isSosContact = true")
+    List<Friendship> findSosContactsByUserId(@Param("userId") Long userId);
     
     // Check if friendship exists between two users (return first match)
     @Query("SELECT f FROM Friendship f " +

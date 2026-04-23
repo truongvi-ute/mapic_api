@@ -76,4 +76,20 @@ public interface MomentRepository extends JpaRepository<Moment, Long> {
             @Param("category") String category,
             Pageable pageable
     );
+
+    // Popular moments: sorted by (reactions + comments)
+    @Query("SELECT m FROM Moment m " +
+           "LEFT JOIN Reaction r ON r.moment = m " +
+           "LEFT JOIN Comment c ON c.moment = m " +
+           "WHERE m.status = 'ACTIVE' " +
+           "AND m.isPublic = true " +
+           "AND (:provinceId IS NULL OR m.province.id = :provinceId) " +
+           "AND (:category IS NULL OR m.category = :category) " +
+           "GROUP BY m.id " +
+           "ORDER BY (COUNT(DISTINCT r) + COUNT(DISTINCT c)) DESC, m.createdAt DESC")
+    Page<Moment> exploreMomentsPopular(
+            @Param("provinceId") Integer provinceId,
+            @Param("category") String category,
+            Pageable pageable
+    );
 }

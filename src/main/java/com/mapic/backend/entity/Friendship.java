@@ -28,8 +28,23 @@ public class Friendship {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private FriendshipStatus status = FriendshipStatus.ACCEPTED;
+
+    @Column(name = "is_sos_contact", nullable = false)
+    @Builder.Default
+    private Boolean isSosContact = false;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        if (status == null) {
+            status = FriendshipStatus.ACCEPTED;
+        }
+        if (isSosContact == null) {
+            isSosContact = false;
+        }
     }
 }

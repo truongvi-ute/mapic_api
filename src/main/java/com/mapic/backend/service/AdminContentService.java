@@ -18,9 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -217,6 +215,9 @@ public class AdminContentService {
         // Get reported user based on target type
         User reportedUser = null;
         String contentPreview = null;
+        String firstMediaUrl = null;
+        List<String> allMediaUrls = new ArrayList<>();
+        int contentReportCount = 0;
         int totalReports = 0;
         
         try {
@@ -226,6 +227,21 @@ public class AdminContentService {
                     if (moment != null) {
                         reportedUser = moment.getAuthor();
                         contentPreview = moment.getContent();
+                        
+                        // Get media URLs
+                        if (moment.getMedia() != null && !moment.getMedia().isEmpty()) {
+                            allMediaUrls = moment.getMedia().stream()
+                                .sorted(Comparator.comparing(MomentMedia::getSortOrder))
+                                .map(MomentMedia::getMediaUrl)
+                                .collect(Collectors.toList());
+                            firstMediaUrl = allMediaUrls.isEmpty() ? null : allMediaUrls.get(0);
+                        }
+                        
+                        // Count reports for THIS moment
+                        contentReportCount = reportRepository.countByTargetIdAndTargetType(
+                            moment.getId(), ReportTargetType.MOMENT);
+                        
+                        // Total reports for the user
                         totalReports = reportRepository.countByTargetIdAndTargetType(
                             reportedUser.getId(), ReportTargetType.USER);
                     }
@@ -235,6 +251,11 @@ public class AdminContentService {
                     if (comment != null) {
                         reportedUser = comment.getAuthor();
                         contentPreview = comment.getContent();
+                        
+                        // Count reports for THIS comment
+                        contentReportCount = reportRepository.countByTargetIdAndTargetType(
+                            comment.getId(), ReportTargetType.COMMENT);
+                        
                         totalReports = reportRepository.countByTargetIdAndTargetType(
                             reportedUser.getId(), ReportTargetType.USER);
                     }
@@ -242,8 +263,9 @@ public class AdminContentService {
                 case USER:
                     reportedUser = userRepository.findById(report.getTargetId()).orElse(null);
                     if (reportedUser != null) {
-                        totalReports = reportRepository.countByTargetIdAndTargetType(
+                        contentReportCount = reportRepository.countByTargetIdAndTargetType(
                             reportedUser.getId(), ReportTargetType.USER);
+                        totalReports = contentReportCount;
                     }
                     break;
             }
@@ -251,11 +273,18 @@ public class AdminContentService {
             log.warn("Error fetching reported content details: {}", e.getMessage());
         }
         
+        // Determine reason category
+        String reasonCategory = report.getReasonCategory() != null 
+            ? report.getReasonCategory().name() 
+            : categorizeReason(report.getReason());
+        
         return ReportResponse.builder()
             .id(report.getId().toString())
             .reportedContentId(report.getTargetId().toString())
             .contentType(report.getTargetType().name())
+            .reasonCategory(reasonCategory)
             .reason(report.getReason())
+            .description(report.getReason())
             .status(report.getStatus().name())
             .createdAt(report.getCreatedAt())
             .reporter(ReportResponse.ReporterInfo.builder()
@@ -276,9 +305,33 @@ public class AdminContentService {
                 .id(report.getTargetId().toString())
                 .type(report.getTargetType().name())
                 .content(contentPreview)
+                .mediaUrl(firstMediaUrl)
+                .mediaUrls(allMediaUrls)
                 .createdAt(report.getCreatedAt())
                 .isDeleted(false)
+                .reportCount(contentReportCount)
                 .build())
             .build();
+    }
+    
+    // Helper method to categorize old free-text reasons
+    private String categorizeReason(String reason) {
+        if (reason == null) return ReportReasonCategory.OTHER.name();
+        
+        String r = reason.toLowerCase();
+        if (r.contains("spam") || r.contains("quảng cáo")) 
+            return ReportReasonCategory.SPAM.name();
+        if (r.contains("quấy rối") || r.contains("bắt nạt")) 
+            return ReportReasonCategory.HARASSMENT.name();
+        if (r.contains("bạo lực") || r.contains("violence")) 
+            return ReportReasonCategory.VIOLENCE.name();
+        if (r.contains("sai lệch") || r.contains("giả mạo") || r.contains("fake")) 
+            return ReportReasonCategory.FAKE_NEWS.name();
+        if (r.contains("thù ghét") || r.contains("phân biệt")) 
+            return ReportReasonCategory.HATE_SPEECH.name();
+        if (r.contains("không phù hợp") || r.contains("inappropriate") || r.contains("nude") || r.contains("khỏa thân")) 
+            return ReportReasonCategory.INAPPROPRIATE.name();
+        
+        return ReportReasonCategory.OTHER.name();
     }
 }

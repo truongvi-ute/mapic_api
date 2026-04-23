@@ -185,8 +185,9 @@ public class MomentServiceImpl implements IMomentService {
         log.info("Exploring moments with filters - province: {}, category: {}, sort: {}", 
                  provinceId, category, sort);
         
-        // Note: sort parameter is currently ignored, always returns newest first
-        // TODO: Implement like/comment counting to enable popular sorting
+        if ("popular".equalsIgnoreCase(sort)) {
+            return momentRepository.exploreMomentsPopular(provinceId, category, pageable);
+        }
         
         return momentRepository.exploreMoments(provinceId, category, pageable);
     }

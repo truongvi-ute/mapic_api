@@ -33,8 +33,10 @@ public class ReactionServiceImpl implements IReactionService {
     private final UserRepository userRepository;
     private final INotificationService notificationService;
 
-    // Moment chỉ cho phép HEART
-    private static final Set<ReactionType> ALLOWED_MOMENT_REACTIONS = Set.of(ReactionType.HEART);
+    // Moment cho phép 6 loại emoji (giống comment)
+    private static final Set<ReactionType> ALLOWED_MOMENT_REACTIONS = 
+        Set.of(ReactionType.LIKE, ReactionType.HEART, ReactionType.HAHA, 
+               ReactionType.WOW, ReactionType.SAD, ReactionType.ANGRY);
     
     // Comment & Message cho phép 6 loại
     private static final Set<ReactionType> ALLOWED_COMMENT_MESSAGE_REACTIONS = 
@@ -47,7 +49,7 @@ public class ReactionServiceImpl implements IReactionService {
         // Validate reaction type for moment
         if (!ALLOWED_MOMENT_REACTIONS.contains(type)) {
             throw new ValidationException(
-                String.format("Reaction type %s is not allowed for moments. Only HEART is supported.", type)
+                String.format("Reaction type %s is not allowed for moments.", type)
             );
         }
 

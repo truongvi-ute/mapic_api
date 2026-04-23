@@ -5,6 +5,8 @@ import com.mapic.backend.dto.request.CommentRequest;
 import com.mapic.backend.entity.Comment;
 import com.mapic.backend.entity.Moment;
 import com.mapic.backend.entity.User;
+import com.mapic.backend.entity.Reaction;
+import com.mapic.backend.entity.ReactionType;
 import com.mapic.backend.entity.NotificationType;
 import com.mapic.backend.exception.NotFoundException;
 import com.mapic.backend.exception.ValidationException;
@@ -18,6 +20,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -158,10 +162,17 @@ public class CommentServiceImpl implements ICommentService {
         long reactionCount = reactionRepository.countByComment(comment);
         
         boolean userReacted = false;
+        ReactionType userReactionType = null;
         if (currentUserId != null) {
             User currentUser = new User();
             currentUser.setId(currentUserId);
-            userReacted = reactionRepository.existsByUserAndComment(currentUser, comment);
+            
+            // Tìm reaction của user hiện tại
+            Optional<Reaction> userReaction = reactionRepository.findByUserAndComment(currentUser, comment);
+            if (userReaction.isPresent()) {
+                userReacted = true;
+                userReactionType = userReaction.get().getType();
+            }
         }
 
         CommentDto.AuthorDto authorDto = CommentDto.AuthorDto.builder()
@@ -181,6 +192,7 @@ public class CommentServiceImpl implements ICommentService {
                 .createdAt(comment.getCreatedAt())
                 .reactionCount(reactionCount)
                 .userReacted(userReacted)
+                .userReactionType(userReactionType)
                 .build();
     }
 }

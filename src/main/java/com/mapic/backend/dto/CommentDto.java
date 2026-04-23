@@ -1,5 +1,6 @@
 package com.mapic.backend.dto;
 
+import com.mapic.backend.entity.ReactionType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,6 +22,7 @@ public class CommentDto {
     private LocalDateTime createdAt;
     private Long reactionCount;
     private Boolean userReacted;
+    private ReactionType userReactionType; // Thêm field này để biết user đã react loại gì
     private List<CommentDto> replies;
 
     @Data

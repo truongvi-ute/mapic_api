@@ -37,6 +37,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/provinces/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/chat-socket/**").permitAll()
+                .requestMatchers("/api/maintenance/**").permitAll() // Allow maintenance endpoints
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session

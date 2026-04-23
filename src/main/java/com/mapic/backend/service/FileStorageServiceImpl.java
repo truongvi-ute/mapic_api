@@ -84,4 +84,22 @@ public class FileStorageServiceImpl implements IStorageService {
         // Otherwise, build the URL path
         return "/uploads/" + subDir + "/" + filename;
     }
+
+    @Override
+    public boolean exists(String filename, String subDir) {
+        if (filename == null || filename.isEmpty()) return false;
+        
+        // For external URLs, assume they exist (can't verify without making HTTP request)
+        if (filename.startsWith("http://") || filename.startsWith("https://")) {
+            return true;
+        }
+        
+        try {
+            Path file = this.rootLocation.resolve(subDir).resolve(filename);
+            return Files.exists(file);
+        } catch (Exception e) {
+            log.warn("Failed to check file existence {}: {}", filename, e.getMessage());
+            return false;
+        }
+    }
 }

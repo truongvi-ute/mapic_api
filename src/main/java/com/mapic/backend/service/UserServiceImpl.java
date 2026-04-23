@@ -52,6 +52,38 @@ public class UserServiceImpl implements IUserService {
         
         UserProfile profile = user.getUserProfile();
         
+        // Validate avatar file existence
+        String avatarUrl = null;
+        if (profile != null && profile.getAvatarUrl() != null) {
+            String rawAvatarUrl = profile.getAvatarUrl();
+            // For external URLs, use as-is
+            if (rawAvatarUrl.startsWith("http://") || rawAvatarUrl.startsWith("https://")) {
+                avatarUrl = rawAvatarUrl;
+            } 
+            // For local files, check existence
+            else if (storageService.exists(rawAvatarUrl, "avatars")) {
+                avatarUrl = storageService.resolveUrl(rawAvatarUrl, "avatars");
+            } else {
+                log.warn("Avatar file not found for user {}: {}", user.getUsername(), rawAvatarUrl);
+            }
+        }
+        
+        // Validate cover image file existence
+        String coverImageUrl = null;
+        if (profile != null && profile.getCoverImageUrl() != null) {
+            String rawCoverUrl = profile.getCoverImageUrl();
+            // For external URLs, use as-is
+            if (rawCoverUrl.startsWith("http://") || rawCoverUrl.startsWith("https://")) {
+                coverImageUrl = rawCoverUrl;
+            }
+            // For local files, check existence
+            else if (storageService.exists(rawCoverUrl, "covers")) {
+                coverImageUrl = storageService.resolveUrl(rawCoverUrl, "covers");
+            } else {
+                log.warn("Cover image file not found for user {}: {}", user.getUsername(), rawCoverUrl);
+            }
+        }
+        
         return UserProfileWithFriendshipResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -59,8 +91,8 @@ public class UserServiceImpl implements IUserService {
                 .email(user.getEmail())
                 .phone(user.getPhone())
                 .bio(profile != null ? profile.getBio() : null)
-                .avatarUrl(profile != null ? storageService.resolveUrl(profile.getAvatarUrl(), "avatars") : null)
-                .coverImageUrl(profile != null ? storageService.resolveUrl(profile.getCoverImageUrl(), "covers") : null)
+                .avatarUrl(avatarUrl)
+                .coverImageUrl(coverImageUrl)
                 .gender(profile != null ? profile.getGender() : null)
                 .dateOfBirth(profile != null ? profile.getDateOfBirth() : null)
                 .friendshipStatus(friendshipStatus)
@@ -189,6 +221,44 @@ public class UserServiceImpl implements IUserService {
     private UserProfileResponse mapToResponse(User user) {
         UserProfile profile = user.getUserProfile();
         
+        // Validate avatar file existence
+        String avatarUrl = null;
+        if (profile != null && profile.getAvatarUrl() != null) {
+            String rawAvatarUrl = profile.getAvatarUrl();
+            // For external URLs, use as-is
+            if (rawAvatarUrl.startsWith("http://") || rawAvatarUrl.startsWith("https://")) {
+                avatarUrl = rawAvatarUrl;
+            } 
+            // For local files, check existence
+            else if (storageService.exists(rawAvatarUrl, "avatars")) {
+                avatarUrl = storageService.resolveUrl(rawAvatarUrl, "avatars");
+            } else {
+                log.warn("Avatar file not found for user {}: {}", user.getUsername(), rawAvatarUrl);
+                // Clear the broken reference from database
+                profile.setAvatarUrl(null);
+                userProfileRepository.save(profile);
+            }
+        }
+        
+        // Validate cover image file existence
+        String coverImageUrl = null;
+        if (profile != null && profile.getCoverImageUrl() != null) {
+            String rawCoverUrl = profile.getCoverImageUrl();
+            // For external URLs, use as-is
+            if (rawCoverUrl.startsWith("http://") || rawCoverUrl.startsWith("https://")) {
+                coverImageUrl = rawCoverUrl;
+            }
+            // For local files, check existence
+            else if (storageService.exists(rawCoverUrl, "covers")) {
+                coverImageUrl = storageService.resolveUrl(rawCoverUrl, "covers");
+            } else {
+                log.warn("Cover image file not found for user {}: {}", user.getUsername(), rawCoverUrl);
+                // Clear the broken reference from database
+                profile.setCoverImageUrl(null);
+                userProfileRepository.save(profile);
+            }
+        }
+        
         return UserProfileResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -196,8 +266,8 @@ public class UserServiceImpl implements IUserService {
                 .name(user.getName())
                 .phone(user.getPhone())
                 .bio(profile != null ? profile.getBio() : null)
-                .avatarUrl(profile != null ? storageService.resolveUrl(profile.getAvatarUrl(), "avatars") : null)
-                .coverImageUrl(profile != null ? storageService.resolveUrl(profile.getCoverImageUrl(), "covers") : null)
+                .avatarUrl(avatarUrl)
+                .coverImageUrl(coverImageUrl)
                 .gender(profile != null ? profile.getGender() : null)
                 .dateOfBirth(profile != null ? profile.getDateOfBirth() : null)
                 .location(profile != null ? profile.getLocation() : null)

@@ -17,4 +17,9 @@ public interface IStorageService {
      * Builds a full URL or path for a given filename.
      */
     String resolveUrl(String filename, String subDir);
+    
+    /**
+     * Checks if a file exists in storage.
+     */
+    boolean exists(String filename, String subDir);
 }

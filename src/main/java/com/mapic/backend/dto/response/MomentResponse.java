@@ -30,6 +30,7 @@ public class MomentResponse {
     private List<MediaInfo> media;
     private Long reactionCount;
     private Boolean userReacted;
+    private ReactionType userReactionType; // Thêm field này
     private Long commentCount;
 
     @Data
@@ -97,14 +98,22 @@ public class MomentResponse {
     }
 
     public static MomentResponse fromEntity(Moment moment) {
-        return fromEntityWithReactionAndComment(moment, 0L, false, 0L);
+        return fromEntityWithReactionAndComment(moment, 0L, false, null, 0L);
     }
 
     public static MomentResponse fromEntityWithReaction(Moment moment, long reactionCount, boolean userReacted) {
-        return fromEntityWithReactionAndComment(moment, reactionCount, userReacted, 0L);
+        return fromEntityWithReactionAndComment(moment, reactionCount, userReacted, null, 0L);
+    }
+    
+    public static MomentResponse fromEntityWithReaction(Moment moment, long reactionCount, boolean userReacted, ReactionType userReactionType) {
+        return fromEntityWithReactionAndComment(moment, reactionCount, userReacted, userReactionType, 0L);
     }
 
     public static MomentResponse fromEntityWithReactionAndComment(Moment moment, long reactionCount, boolean userReacted, long commentCount) {
+        return fromEntityWithReactionAndComment(moment, reactionCount, userReacted, null, commentCount);
+    }
+
+    public static MomentResponse fromEntityWithReactionAndComment(Moment moment, long reactionCount, boolean userReacted, ReactionType userReactionType, long commentCount) {
         return MomentResponse.builder()
                 .id(moment.getId())
                 .content(moment.getContent())
@@ -153,6 +162,7 @@ public class MomentResponse {
                         .collect(Collectors.toList()) : null)
                 .reactionCount(reactionCount)
                 .userReacted(userReacted)
+                .userReactionType(userReactionType)
                 .commentCount(commentCount)
                 .build();
     }
