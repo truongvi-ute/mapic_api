@@ -65,35 +65,59 @@ public class FriendServiceImpl implements IFriendService {
         if (senderId.equals(dto.getReceiverId())) {
             throw new BadRequestException("Cannot send friend request to yourself");
         }
-
+    
         User sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new NotFoundException("Sender not found"));
         User receiver = userRepository.findById(dto.getReceiverId())
                 .orElseThrow(() -> new NotFoundException("User not found"));
-
+    
         // Check if already friends
         boolean areFriends = friendshipRepository.existsFriendshipBetweenUsers(senderId, dto.getReceiverId());
         if (areFriends) {
             throw new BadRequestException("Already friends");
         }
-
-        // Check if request already exists (not expired)
-        Optional<FriendRequest> existingRequest = friendRequestRepository
-                .findPendingRequestBetweenUsers(senderId, dto.getReceiverId(), LocalDateTime.now());
-        if (existingRequest.isPresent()) {
-            throw new BadRequestException("Friend request already sent");
+    
+        // Check if request already exists from recipient to sender
+        Optional<FriendRequest> reverseRequest = friendRequestRepository
+                .findBySenderAndReceiverAndStatus(receiver, sender, FriendRequestStatus.PENDING);
+        if (reverseRequest.isPresent()) {
+            // Check if reverse request is not expired
+            if (reverseRequest.get().getExpiresAt().isAfter(LocalDateTime.now())) {
+                throw new BadRequestException("User already sent you a friend request. Check your notifications.");
+            }
         }
-
-        // Create new request
-        FriendRequest request = FriendRequest.builder()
-                .sender(sender)
-                .receiver(receiver)
-                .status(FriendRequestStatus.PENDING)
-                .build();
-
+    
+        // Check if request already exists from sender to receiver (any status)
+        Optional<FriendRequest> existingRequest = friendRequestRepository.findBySenderAndReceiver(sender, receiver);
+        
+        FriendRequest request;
+        if (existingRequest.isPresent()) {
+            request = existingRequest.get();
+            
+            // If already pending and not expired, don't allow sending again
+            if (request.getStatus() == FriendRequestStatus.PENDING && request.getExpiresAt().isAfter(LocalDateTime.now())) {
+                throw new BadRequestException("Friend request already sent");
+            }
+            
+            // Reset/Update existing request
+            log.info("Reusing existing friend request {} for user {} to user {}", 
+                    request.getId(), senderId, dto.getReceiverId());
+            request.setStatus(FriendRequestStatus.PENDING);
+            request.setCreatedAt(LocalDateTime.now());
+            request.setUpdatedAt(LocalDateTime.now());
+            request.setExpiresAt(LocalDateTime.now().plusDays(30));
+        } else {
+            // Create new request
+            request = FriendRequest.builder()
+                    .sender(sender)
+                    .receiver(receiver)
+                    .status(FriendRequestStatus.PENDING)
+                    .build();
+        }
+    
         friendRequestRepository.save(request);
         log.info("Friend request sent from user {} to user {}", senderId, dto.getReceiverId());
-
+    
         // Notify receiver
         notificationService.createNotification(sender, receiver, NotificationType.FRIEND_REQUEST, "FRIENDSHIP", request.getId());
     }

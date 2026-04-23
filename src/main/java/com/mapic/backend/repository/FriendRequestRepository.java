@@ -16,6 +16,9 @@ import java.util.Optional;
 public interface FriendRequestRepository extends JpaRepository<FriendRequest, Long> {
     
     // Check if request exists between two users
+    Optional<FriendRequest> findBySenderAndReceiver(User sender, User receiver);
+    
+    // Check if request exists between two users with specific status
     Optional<FriendRequest> findBySenderAndReceiverAndStatus(User sender, User receiver, FriendRequestStatus status);
     
     // Find pending requests received by user
