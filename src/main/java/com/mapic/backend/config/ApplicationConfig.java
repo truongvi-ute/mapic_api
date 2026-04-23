@@ -17,24 +17,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @RequiredArgsConstructor
 public class ApplicationConfig {
 
-    private final UserRepository userRepository;
-
-    @Bean
-    public UserDetailsService userDetailsService() {
-        return identifier -> userRepository.findByUsernameOrEmail(identifier, identifier)
-                .map(user -> org.springframework.security.core.userdetails.User.builder()
-                        .username(user.getUsername())
-                        .password(user.getPassword())
-                        .authorities("USER")
-                        .disabled(user.getStatus() == com.mapic.backend.entity.AccountStatus.BLOCK)
-                        .build())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with username or email: " + identifier));
-    }
+    // CustomUserDetailsService will be auto-injected (supports both users and admins)
+    private final UserDetailsService userDetailsService;
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService());
+        authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }

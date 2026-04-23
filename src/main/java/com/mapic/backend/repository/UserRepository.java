@@ -1,5 +1,6 @@
 package com.mapic.backend.repository;
 
+import com.mapic.backend.entity.AccountStatus;
 import com.mapic.backend.entity.User;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -20,6 +21,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
+    
+    // Count users by status
+    long countByStatus(AccountStatus status);
     
     // Search users by name or username
     @Query("SELECT u FROM User u " +

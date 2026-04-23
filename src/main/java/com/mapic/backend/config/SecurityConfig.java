@@ -34,6 +34,7 @@ public class SecurityConfig {
             }))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/admin/auth/**").permitAll() // Allow admin authentication
                 .requestMatchers("/api/provinces/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/chat-socket/**").permitAll()

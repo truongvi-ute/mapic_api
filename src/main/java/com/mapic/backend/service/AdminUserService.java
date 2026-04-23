@@ -31,6 +31,7 @@ public class AdminUserService {
     private final UserRepository userRepository;
     private final MomentRepository momentRepository;
     private final FriendshipRepository friendshipRepository;
+    private final IStorageService storageService;
 
     public Page<UserProfileResponse> getUsers(int page, int size, String search, String status) {
         log.info("Getting users - page: {}, size: {}, search: {}, status: {}", page, size, search, status);
@@ -127,6 +128,12 @@ public class AdminUserService {
         long momentsCount = momentRepository.findByAuthorId(user.getId()).size();
         long friendsCount = friendshipRepository.findAllFriendsByUserId(user.getId()).size();
         
+        // Resolve avatar URL
+        String avatarUrl = null;
+        if (user.getUserProfile() != null && user.getUserProfile().getAvatarUrl() != null) {
+            avatarUrl = storageService.resolveUrl(user.getUserProfile().getAvatarUrl(), "avatars");
+        }
+        
         return UserProfileResponse.builder()
             .id(user.getId().toString())
             .username(user.getUsername())
@@ -135,8 +142,9 @@ public class AdminUserService {
             .phone(user.getPhone())
             .status(user.getStatus().name())
             .createdAt(user.getCreatedAt())
+            .lastSeenAt(user.getUpdatedAt() != null ? user.getUpdatedAt() : user.getCreatedAt())
             .bio(user.getUserProfile() != null ? user.getUserProfile().getBio() : null)
-            .avatarUrl(user.getUserProfile() != null ? user.getUserProfile().getAvatarUrl() : null)
+            .avatarUrl(avatarUrl)
             .gender(user.getUserProfile() != null && user.getUserProfile().getGender() != null 
                 ? user.getUserProfile().getGender().name() : null)
             .location(user.getUserProfile() != null ? user.getUserProfile().getLocation() : null)

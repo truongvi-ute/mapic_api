@@ -33,6 +33,8 @@ public class DataSeed implements CommandLineRunner {
     private final LocationRepository locationRepository;
     private final UserStatusRepository userStatusRepository;
     private final NotificationRepository notificationRepository;
+    private final AdminRepository adminRepository;
+    private final ReportRepository reportRepository;
     private final PasswordEncoder passwordEncoder;
 
     private final Random random = new Random();
@@ -40,6 +42,9 @@ public class DataSeed implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) throws Exception {
+        // Seed admin first
+        seedAdmin();
+        
         // Clean up mock avatars from previous seeds
         log.info("Cleaning up mock avatar URLs...");
         List<UserProfile> profiles = userProfileRepository.findAll();
@@ -52,7 +57,18 @@ public class DataSeed implements CommandLineRunner {
         }
         
         if (userRepository.count() >= 5) {
-            log.info("Database already seeded with enough users. Skipping data seed.");
+            log.info("Database already seeded with enough users. Skipping user data seed.");
+            
+            // But still seed reports if needed
+            if (reportRepository.count() == 0) {
+                log.info("No reports found. Seeding sample reports...");
+                List<User> users = userRepository.findAll();
+                List<Moment> moments = momentRepository.findAll();
+                createSampleReports(users, moments);
+            } else {
+                log.info("Reports already exist ({} reports). Skipping report seed.", reportRepository.count());
+            }
+            
             return;
         }
 
@@ -238,6 +254,9 @@ public class DataSeed implements CommandLineRunner {
 
         // 5. Create Sample Notifications
         createSampleNotifications(users, allMoments);
+        
+        // 6. Create Sample Reports
+        createSampleReports(users, allMoments);
 
         log.info("Data seeding completed successfully!");
     }
@@ -297,5 +316,108 @@ public class DataSeed implements CommandLineRunner {
                 .updatedAt(LocalDateTime.now())
                 .build();
         friendRequestRepository.save(request);
+    }
+
+    private void seedAdmin() {
+        // Check if admin already exists
+        if (adminRepository.existsByUsername("admin")) {
+            log.info("Admin user already exists. Skipping admin seed.");
+            return;
+        }
+
+        log.info("Creating default admin user...");
+        
+        Admin admin = Admin.builder()
+                .name("Super Administrator")
+                .email("admin@mapic.com")
+                .role(AdminRole.SUPER_ADMIN)
+                .isActive(true)
+                .build();
+        
+        admin.setUsername("admin");
+        admin.setPassword(passwordEncoder.encode("123456"));
+        admin.setStatus(AccountStatus.ACTIVE);
+        
+        adminRepository.save(admin);
+        
+        log.info("✅ Admin user created successfully!");
+        log.info("   Username: admin");
+        log.info("   Password: 123456");
+        log.info("   Role: SUPER_ADMIN");
+    }
+    
+    private void createSampleReports(List<User> users, List<Moment> moments) {
+        if (users.size() < 3 || moments.isEmpty()) {
+            log.warn("Not enough users or moments to create sample reports");
+            return;
+        }
+        
+        // Clear existing reports to avoid duplicates
+        reportRepository.deleteAll();
+        log.info("Cleared existing reports");
+        
+        List<Comment> comments = commentRepository.findAll();
+        if (comments.isEmpty()) {
+            log.warn("No comments found to create reports");
+            return;
+        }
+        
+        // Report 1: Nội dung sai lệch (FAKE_NEWS) - Moment
+        if (moments.size() > 0) {
+            Report report1 = Report.builder()
+                    .reporter(users.get(1))
+                    .targetId(moments.get(0).getId())
+                    .targetType(ReportTargetType.MOMENT)
+                    .reason("Bài viết chứa thông tin sai lệch về địa điểm")
+                    .reasonCategory(ReportReasonCategory.FAKE_NEWS)
+                    .status(ReportStatus.PENDING)
+                    .build();
+            reportRepository.save(report1);
+            log.info("Created FAKE_NEWS report for moment {}", moments.get(0).getId());
+        }
+        
+        // Report 2: Vi phạm tiêu chuẩn cộng đồng (INAPPROPRIATE) - Comment
+        if (comments.size() > 0) {
+            Report report2 = Report.builder()
+                    .reporter(users.get(2))
+                    .targetId(comments.get(0).getId())
+                    .targetType(ReportTargetType.COMMENT)
+                    .reason("Bình luận có nội dung không phù hợp với cộng đồng")
+                    .reasonCategory(ReportReasonCategory.INAPPROPRIATE)
+                    .status(ReportStatus.PENDING)
+                    .build();
+            reportRepository.save(report2);
+            log.info("Created INAPPROPRIATE report for comment {}", comments.get(0).getId());
+        }
+        
+        // Report 3: Ngôn từ thù ghét (HATE_SPEECH) - Moment
+        if (moments.size() > 1) {
+            Report report3 = Report.builder()
+                    .reporter(users.get(0))
+                    .targetId(moments.get(1).getId())
+                    .targetType(ReportTargetType.MOMENT)
+                    .reason("Bài viết có ngôn từ phân biệt đối xử")
+                    .reasonCategory(ReportReasonCategory.HATE_SPEECH)
+                    .status(ReportStatus.PENDING)
+                    .build();
+            reportRepository.save(report3);
+            log.info("Created HATE_SPEECH report for moment {}", moments.get(1).getId());
+        }
+        
+        // Report 4: Khác (OTHER) - Comment
+        if (comments.size() > 1) {
+            Report report4 = Report.builder()
+                    .reporter(users.get(1))
+                    .targetId(comments.get(1).getId())
+                    .targetType(ReportTargetType.COMMENT)
+                    .reason("Nội dung không phù hợp, cần xem xét")
+                    .reasonCategory(ReportReasonCategory.OTHER)
+                    .status(ReportStatus.RESOLVED)
+                    .build();
+            reportRepository.save(report4);
+            log.info("Created OTHER report for comment {}", comments.get(1).getId());
+        }
+        
+        log.info("✅ Created 4 sample reports (FAKE_NEWS, INAPPROPRIATE, HATE_SPEECH, OTHER)");
     }
 }

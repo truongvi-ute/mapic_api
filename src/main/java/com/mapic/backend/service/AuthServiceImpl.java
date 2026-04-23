@@ -26,7 +26,7 @@ public class AuthServiceImpl implements IAuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final IOtpService otpService;
-    private final EmailService emailService;
+    private final IEmailService emailService;
     private final AuthenticationManager authenticationManager;
 
     @Override
@@ -47,7 +47,7 @@ public class AuthServiceImpl implements IAuthService {
 
         // 4. Tạo và gửi OTP (TTL 5p)
         String otp = otpService.generateAndStoreOtp(request.getEmail(), OtpType.REGISTRATION);
-        emailService.sendOtpEmail(request.getEmail(), otp);
+        emailService.sendOtpEmail(request.getEmail(), otp, request.getName());
 
         return ApiResponse.success("OTP sent to your email", request.getEmail());
     }
@@ -90,7 +90,10 @@ public class AuthServiceImpl implements IAuthService {
         otpService.deleteOtp(request.getEmail(), OtpType.REGISTRATION);
         otpService.deletePendingRegistration(request.getEmail());
 
-        // 5. Tạo Token và trả về kết quả
+        // 5. Gửi welcome email (async, không block)
+        emailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getName());
+
+        // 6. Tạo Token và trả về kết quả
         String token = jwtUtil.generateToken(savedUser.getUsername(), savedUser.getId());
         
         AuthResponse response = AuthResponse.builder()
@@ -109,19 +112,24 @@ public class AuthServiceImpl implements IAuthService {
         OtpType type = request.getType() != null ? request.getType() : OtpType.REGISTRATION;
 
         // Đăng ký mới cần kiểm tra session có còn không
+        String userName = "User"; // Default name
         if (type == OtpType.REGISTRATION) {
-            if (otpService.getPendingRegistration(request.getEmail()).isEmpty()) {
+            var pendingReg = otpService.getPendingRegistration(request.getEmail());
+            if (pendingReg.isEmpty()) {
                 throw new AppException("Registration session expired. Please register again.");
             }
+            userName = pendingReg.get().getName();
         } else {
             // Quên mật khẩu cần kiểm tra email có tồn tại trong DB không
-            if (!userRepository.existsByEmail(request.getEmail())) {
+            var userOpt = userRepository.findByEmail(request.getEmail());
+            if (userOpt.isEmpty()) {
                 throw new AppException("User with this email does not exist");
             }
+            userName = userOpt.get().getName();
         }
 
         String otp = otpService.generateAndStoreOtp(request.getEmail(), type);
-        emailService.sendOtpEmail(request.getEmail(), otp);
+        emailService.sendOtpEmail(request.getEmail(), otp, userName);
         return ApiResponse.success("New OTP sent to your email", null);
     }
 
@@ -159,12 +167,11 @@ public class AuthServiceImpl implements IAuthService {
     @Override
     public ApiResponse<String> forgotPassword(ForgotPasswordRequest request) {
         String email = request.getEmail();
-        if (!userRepository.existsByEmail(email)) {
-            throw new AppException("Email not found");
-        }
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new AppException("Email not found"));
         
         String otp = otpService.generateAndStoreOtp(email, OtpType.FORGOT_PASSWORD);
-        emailService.sendOtpEmail(email, otp);
+        emailService.sendPasswordResetOtp(email, otp, user.getName());
         return ApiResponse.success("OTP sent to your email", null);
     }
 
@@ -202,12 +209,11 @@ public class AuthServiceImpl implements IAuthService {
     @Override
     public ApiResponse<String> changePassword(ForgotPasswordRequest request) {
         String email = request.getEmail();
-        if (!userRepository.existsByEmail(email)) {
-            throw new AppException("Email not found");
-        }
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new AppException("Email not found"));
         
         String otp = otpService.generateAndStoreOtp(email, OtpType.CHANGE_PASSWORD);
-        emailService.sendOtpEmail(email, otp);
+        emailService.sendPasswordResetOtp(email, otp, user.getName());
         return ApiResponse.success("OTP sent to your email", null);
     }
 

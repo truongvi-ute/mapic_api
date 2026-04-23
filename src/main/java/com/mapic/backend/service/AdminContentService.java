@@ -30,6 +30,7 @@ public class AdminContentService {
     private final MomentRepository momentRepository;
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
+    private final IStorageService storageService;
 
     public Page<ReportResponse> getReportQueue(int page, int size, String type, String status, String search) {
         log.info("Getting report queue - page: {}, size: {}, type: {}, status: {}", page, size, type, status);
@@ -47,11 +48,15 @@ public class AdminContentService {
 
     @Transactional
     public void moderateContent(String reportId, ModerationActionRequest request) {
-        log.info("Moderating report {} with action {}", reportId, request.getAction());
+        log.info("[MODERATION] Starting moderation for report {} with action {}", reportId, request.getAction());
+        log.info("[MODERATION] Request details - reason: {}, note: {}", request.getReason(), request.getNote());
         
         Long id = Long.parseLong(reportId);
         Report report = reportRepository.findById(id)
-            .orElseThrow(() -> new NotFoundException("Report not found"));
+            .orElseThrow(() -> new NotFoundException("Report not found with ID: " + reportId));
+        
+        log.info("[MODERATION] Found report - targetType: {}, targetId: {}, status: {}", 
+                 report.getTargetType(), report.getTargetId(), report.getStatus());
         
         // Handle moderation based on target type
         switch (report.getTargetType()) {
@@ -66,61 +71,116 @@ public class AdminContentService {
                 break;
         }
         
-        // Update report status
-        report.setStatus(ReportStatus.RESOLVED);
+        // Update report status based on action
+        if ("IGNORE".equals(request.getAction())) {
+            report.setStatus(ReportStatus.DISMISSED);
+        } else {
+            report.setStatus(ReportStatus.RESOLVED);
+        }
         reportRepository.save(report);
         
-        log.info("Report {} moderated successfully", reportId);
+        log.info("[MODERATION] Report {} moderated successfully - new status: {}", reportId, report.getStatus());
     }
 
     private void moderateMoment(Report report, ModerationActionRequest request) {
+        log.info("[MODERATION-MOMENT] Processing moment {} with action {}", report.getTargetId(), request.getAction());
+        
         Moment moment = momentRepository.findById(report.getTargetId())
-            .orElseThrow(() -> new NotFoundException("Moment not found"));
+            .orElseThrow(() -> new NotFoundException("Moment not found with ID: " + report.getTargetId()));
+        
+        log.info("[MODERATION-MOMENT] Current moment status: {}", moment.getStatus());
         
         switch (request.getAction()) {
             case "DELETE":
                 moment.setStatus("DELETED");
                 momentRepository.save(moment);
-                log.info("Moment {} deleted", moment.getId());
+                log.info("[MODERATION-MOMENT] Moment {} marked as DELETED", moment.getId());
                 break;
             case "HIDE":
                 moment.setStatus("HIDDEN");
                 momentRepository.save(moment);
-                log.info("Moment {} hidden", moment.getId());
+                log.info("[MODERATION-MOMENT] Moment {} marked as HIDDEN", moment.getId());
                 break;
             case "APPROVE":
-                // Content is OK, do nothing
-                log.info("Moment {} approved", moment.getId());
+                // Content is OK, ensure it's not hidden/deleted
+                if ("HIDDEN".equals(moment.getStatus()) || "DELETED".equals(moment.getStatus())) {
+                    moment.setStatus("ACTIVE");
+                    momentRepository.save(moment);
+                }
+                log.info("[MODERATION-MOMENT] Moment {} approved", moment.getId());
                 break;
             case "IGNORE":
-                // Ignore the report
-                log.info("Report for moment {} ignored", moment.getId());
+                // Ignore the report, don't change moment status
+                log.info("[MODERATION-MOMENT] Report for moment {} ignored", moment.getId());
+                break;
+            case "WARN":
+                // Warn user but don't change content status
+                log.info("[MODERATION-MOMENT] Warning issued for moment {}, no status change", moment.getId());
+                break;
+            default:
+                log.warn("[MODERATION-MOMENT] Unknown action: {}", request.getAction());
                 break;
         }
     }
 
     private void moderateComment(Report report, ModerationActionRequest request) {
+        log.info("[MODERATION-COMMENT] Processing comment {} with action {}", report.getTargetId(), request.getAction());
+        
         Comment comment = commentRepository.findById(report.getTargetId())
-            .orElseThrow(() -> new NotFoundException("Comment not found"));
+            .orElseThrow(() -> new NotFoundException("Comment not found with ID: " + report.getTargetId()));
         
         // Comment không có status field, chỉ có thể delete
-        if ("DELETE".equals(request.getAction())) {
-            commentRepository.delete(comment);
-            log.info("Comment {} deleted", comment.getId());
-        } else {
-            log.warn("Comment moderation only supports DELETE action. Action {} ignored.", request.getAction());
+        switch (request.getAction()) {
+            case "DELETE":
+                commentRepository.delete(comment);
+                log.info("[MODERATION-COMMENT] Comment {} deleted", comment.getId());
+                break;
+            case "APPROVE":
+            case "IGNORE":
+            case "WARN":
+                // For comments, these actions just resolve the report without deleting
+                log.info("[MODERATION-COMMENT] Comment {} - action {} applied (no deletion)", 
+                         comment.getId(), request.getAction());
+                break;
+            case "HIDE":
+                log.warn("[MODERATION-COMMENT] HIDE not supported for comments (no status field). Use DELETE instead.");
+                break;
+            default:
+                log.warn("[MODERATION-COMMENT] Unknown action: {}", request.getAction());
+                break;
         }
     }
 
     private void moderateUser(Report report, ModerationActionRequest request) {
-        User user = userRepository.findById(report.getTargetId())
-            .orElseThrow(() -> new NotFoundException("User not found"));
+        log.info("[MODERATION-USER] Processing user {} with action {}", report.getTargetId(), request.getAction());
         
-        if ("DELETE".equals(request.getAction()) || "HIDE".equals(request.getAction())) {
-            // Block user
-            user.setStatus(AccountStatus.BLOCK);
-            userRepository.save(user);
-            log.info("User {} blocked", user.getId());
+        User user = userRepository.findById(report.getTargetId())
+            .orElseThrow(() -> new NotFoundException("User not found with ID: " + report.getTargetId()));
+        
+        log.info("[MODERATION-USER] Current user status: {}", user.getStatus());
+        
+        switch (request.getAction()) {
+            case "DELETE":
+            case "HIDE":
+                // Block user
+                user.setStatus(AccountStatus.BLOCK);
+                userRepository.save(user);
+                log.info("[MODERATION-USER] User {} blocked", user.getId());
+                break;
+            case "WARN":
+                // Just warn, don't block
+                log.info("[MODERATION-USER] Warning issued to user {}", user.getId());
+                // TODO: Implement warning system (notification, warning count, etc.)
+                break;
+            case "APPROVE":
+            case "IGNORE":
+                // Report is invalid, don't change user status
+                log.info("[MODERATION-USER] User {} - action {} applied (no status change)", 
+                         user.getId(), request.getAction());
+                break;
+            default:
+                log.warn("[MODERATION-USER] Unknown action: {}", request.getAction());
+                break;
         }
     }
 
@@ -228,11 +288,11 @@ public class AdminContentService {
                         reportedUser = moment.getAuthor();
                         contentPreview = moment.getContent();
                         
-                        // Get media URLs
+                        // Get media URLs and resolve them to full paths
                         if (moment.getMedia() != null && !moment.getMedia().isEmpty()) {
                             allMediaUrls = moment.getMedia().stream()
                                 .sorted(Comparator.comparing(MomentMedia::getSortOrder))
-                                .map(MomentMedia::getMediaUrl)
+                                .map(media -> storageService.resolveUrl(media.getMediaUrl(), "moments"))
                                 .collect(Collectors.toList());
                             firstMediaUrl = allMediaUrls.isEmpty() ? null : allMediaUrls.get(0);
                         }
@@ -291,13 +351,17 @@ public class AdminContentService {
                 .id(reporter.getId().toString())
                 .username(reporter.getUsername())
                 .name(reporter.getName())
-                .avatarUrl(reporter.getUserProfile() != null ? reporter.getUserProfile().getAvatarUrl() : null)
+                .avatarUrl(reporter.getUserProfile() != null 
+                    ? storageService.resolveUrl(reporter.getUserProfile().getAvatarUrl(), "avatars")
+                    : null)
                 .build())
             .reportedUser(reportedUser != null ? ReportResponse.ReportedUserInfo.builder()
                 .id(reportedUser.getId().toString())
                 .username(reportedUser.getUsername())
                 .name(reportedUser.getName())
-                .avatarUrl(reportedUser.getUserProfile() != null ? reportedUser.getUserProfile().getAvatarUrl() : null)
+                .avatarUrl(reportedUser.getUserProfile() != null 
+                    ? storageService.resolveUrl(reportedUser.getUserProfile().getAvatarUrl(), "avatars")
+                    : null)
                 .totalReports(totalReports)
                 .isBanned(reportedUser.getStatus() == AccountStatus.BLOCK)
                 .build() : null)
@@ -316,22 +380,63 @@ public class AdminContentService {
     
     // Helper method to categorize old free-text reasons
     private String categorizeReason(String reason) {
-        if (reason == null) return ReportReasonCategory.OTHER.name();
+        if (reason == null || reason.trim().isEmpty()) {
+            log.warn("[CATEGORIZE] Reason is null or empty, defaulting to OTHER");
+            return ReportReasonCategory.OTHER.name();
+        }
         
-        String r = reason.toLowerCase();
-        if (r.contains("spam") || r.contains("quảng cáo")) 
+        String r = reason.toLowerCase().trim();
+        log.debug("[CATEGORIZE] Categorizing reason: {}", r);
+        
+        // Spam patterns
+        if (r.contains("spam") || r.contains("quảng cáo") || r.contains("quang cao") || 
+            r.contains("rác") || r.contains("rac") || r.contains("advertisement")) {
+            log.debug("[CATEGORIZE] Matched SPAM");
             return ReportReasonCategory.SPAM.name();
-        if (r.contains("quấy rối") || r.contains("bắt nạt")) 
-            return ReportReasonCategory.HARASSMENT.name();
-        if (r.contains("bạo lực") || r.contains("violence")) 
-            return ReportReasonCategory.VIOLENCE.name();
-        if (r.contains("sai lệch") || r.contains("giả mạo") || r.contains("fake")) 
-            return ReportReasonCategory.FAKE_NEWS.name();
-        if (r.contains("thù ghét") || r.contains("phân biệt")) 
-            return ReportReasonCategory.HATE_SPEECH.name();
-        if (r.contains("không phù hợp") || r.contains("inappropriate") || r.contains("nude") || r.contains("khỏa thân")) 
-            return ReportReasonCategory.INAPPROPRIATE.name();
+        }
         
+        // Harassment patterns
+        if (r.contains("quấy rối") || r.contains("quay roi") || r.contains("bắt nạt") || 
+            r.contains("bat nat") || r.contains("harassment") || r.contains("bully") ||
+            r.contains("đe dọa") || r.contains("de doa") || r.contains("threat")) {
+            log.debug("[CATEGORIZE] Matched HARASSMENT");
+            return ReportReasonCategory.HARASSMENT.name();
+        }
+        
+        // Violence patterns
+        if (r.contains("bạo lực") || r.contains("bao luc") || r.contains("violence") || 
+            r.contains("đánh nhau") || r.contains("danh nhau") || r.contains("máu me") ||
+            r.contains("mau me") || r.contains("gore")) {
+            log.debug("[CATEGORIZE] Matched VIOLENCE");
+            return ReportReasonCategory.VIOLENCE.name();
+        }
+        
+        // Fake news patterns
+        if (r.contains("sai lệch") || r.contains("sai lech") || r.contains("giả mạo") || 
+            r.contains("gia mao") || r.contains("fake") || r.contains("tin giả") ||
+            r.contains("tin gia") || r.contains("misinformation") || r.contains("hoax")) {
+            log.debug("[CATEGORIZE] Matched FAKE_NEWS");
+            return ReportReasonCategory.FAKE_NEWS.name();
+        }
+        
+        // Hate speech patterns
+        if (r.contains("thù ghét") || r.contains("thu ghet") || r.contains("phân biệt") || 
+            r.contains("phan biet") || r.contains("hate") || r.contains("racist") ||
+            r.contains("discrimination") || r.contains("kỳ thị") || r.contains("ky thi")) {
+            log.debug("[CATEGORIZE] Matched HATE_SPEECH");
+            return ReportReasonCategory.HATE_SPEECH.name();
+        }
+        
+        // Inappropriate content patterns
+        if (r.contains("không phù hợp") || r.contains("khong phu hop") || 
+            r.contains("inappropriate") || r.contains("nude") || r.contains("khỏa thân") ||
+            r.contains("khoa than") || r.contains("sex") || r.contains("porn") ||
+            r.contains("18+") || r.contains("nhạy cảm") || r.contains("nhay cam")) {
+            log.debug("[CATEGORIZE] Matched INAPPROPRIATE");
+            return ReportReasonCategory.INAPPROPRIATE.name();
+        }
+        
+        log.debug("[CATEGORIZE] No match found, defaulting to OTHER");
         return ReportReasonCategory.OTHER.name();
     }
 }

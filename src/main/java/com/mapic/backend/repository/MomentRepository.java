@@ -8,10 +8,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
 public interface MomentRepository extends JpaRepository<Moment, Long> {
+    
+    // Count moments created after a specific date
+    long countByCreatedAtAfter(LocalDateTime dateTime);
     
     @Query("SELECT DISTINCT m FROM Moment m " +
            "LEFT JOIN FETCH m.author a " +

@@ -54,18 +54,25 @@ public class AdminContentController {
             @PathVariable String reportId,
             @Valid @RequestBody ModerationActionRequest request) {
         
-        log.info("[ADMIN-CONTENT] Moderating report {} with action {}", 
-                 reportId, request.getAction());
+        log.info("[ADMIN-CONTENT] ========== MODERATION REQUEST START ==========");
+        log.info("[ADMIN-CONTENT] Report ID: {}", reportId);
+        log.info("[ADMIN-CONTENT] Action: {}", request.getAction());
+        log.info("[ADMIN-CONTENT] Reason: {}", request.getReason());
+        log.info("[ADMIN-CONTENT] Note: {}", request.getNote());
+        log.info("[ADMIN-CONTENT] Notify User: {}", request.isNotifyUser());
+        log.info("[ADMIN-CONTENT] Notify Reporter: {}", request.isNotifyReporter());
         
         try {
             adminContentService.moderateContent(reportId, request);
-            log.info("[ADMIN-CONTENT] Moderation action completed for report {}", reportId);
+            log.info("[ADMIN-CONTENT] Moderation action completed successfully for report {}", reportId);
+            log.info("[ADMIN-CONTENT] ========== MODERATION REQUEST END (SUCCESS) ==========");
             
             return ResponseEntity.ok(
                 ApiResponse.success("Content moderated successfully", null)
             );
             
         } catch (Exception e) {
+            log.error("[ADMIN-CONTENT] ========== MODERATION REQUEST END (FAILED) ==========");
             log.error("[ADMIN-CONTENT] Failed to moderate report {}: {}", 
                       reportId, e.getMessage(), e);
             throw e;
