@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.File;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -139,13 +140,26 @@ public class DataSeed implements CommandLineRunner {
 
         // 3. Create Moments
         String[] categories = {"LANDSCAPE", "FOOD", "OTHER", "ARCHITECTURE", "PEOPLE"};
-        String[] seedImages = {
-                "seed-VN-HN-nature-002.jpg", "seed-VN-HN-nature-004.jpg", "seed-VN-SG-architecture-005.jpg",
-                "seed-VN-SG-architecture-006.jpg", "seed-VN-DN-landscape-010.jpg", "seed-VN-DN-nature-011.jpg",
-                "seed-VN-HP-food-015.jpg", "seed-VN-HP-nature-013.jpg", "seed-VN-LD-urban-081.jpg",
-                "seed-VN-LD-nature-084.jpg", "seed-VN-HA-landscape-062.jpg", "seed-VN-HA-nature-063.jpg",
-                "seed-VN-BTH-nature-039.jpg", "seed-VN-BTH-food-040.jpg", "seed-VN-CT-landscape-016.jpg"
-        };
+        
+        List<String> seedImagesList = new ArrayList<>();
+        File uploadDir = new File("uploads/moments");
+        if (uploadDir.exists() && uploadDir.isDirectory()) {
+            File[] files = uploadDir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isFile() && !file.getName().startsWith(".")) {
+                        seedImagesList.add(file.getName());
+                    }
+                }
+            }
+        }
+        
+        if (seedImagesList.isEmpty()) {
+            log.warn("No images found in uploads/moments. Using default dummy names.");
+            seedImagesList.add("default.jpg");
+        }
+        
+        String[] seedImages = seedImagesList.toArray(new String[0]);
 
         List<Moment> allMoments = new ArrayList<>();
         int imgIdx = 0;
