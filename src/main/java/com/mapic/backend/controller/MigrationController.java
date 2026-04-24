@@ -226,7 +226,7 @@ public class MigrationController {
             updatedAvatars, updatedCovers, updatedMomentMedia
         );
 
-        return ResponseEntity.ok(ApiResponse.success(message));
+        return ResponseEntity.ok(ApiResponse.success(message, null));
     }
 
     private String buildCloudinaryUrl(String filename, String folder) {
