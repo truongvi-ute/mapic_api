@@ -171,14 +171,17 @@ public class NotificationServiceImpl implements INotificationService {
     private void pushNotification(Notification notification) {
         try {
             NotificationDTO dto = convertToDTO(notification);
+            log.info("[NOTIFICATION] Pushing to user: {} via WebSocket, type: {}", 
+                    notification.getRecipient().getUsername(), notification.getType());
             messagingTemplate.convertAndSendToUser(
                     notification.getRecipient().getUsername(),  // Sử dụng username thay vì userId
                     "/queue/notifications",
                     dto
             );
-            log.debug("Pushed notification to user via WebSocket: {}", notification.getRecipient().getUsername());
+            log.info("[NOTIFICATION] ✅ Successfully pushed notification to user: {}", notification.getRecipient().getUsername());
         } catch (Exception e) {
-            log.error("Failed to push notification via WebSocket", e);
+            log.error("[NOTIFICATION] ❌ Failed to push notification via WebSocket to user: {}", 
+                    notification.getRecipient().getUsername(), e);
         }
     }
 

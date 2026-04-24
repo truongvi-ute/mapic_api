@@ -60,13 +60,15 @@ public class SOSServiceImpl implements SOSService {
         
         // If no specific SOS contacts are set, fallback to all friends
         if (friendships.isEmpty()) {
-            log.info("No designated SOS contacts found for user {}, falling back to all friends", userId);
+            log.info("[SOS] No designated SOS contacts found for user {}, falling back to all friends", userId);
             friendships = friendshipRepository.findAllFriendsByUserId(userId);
         }
 
         List<User> friends = friendships.stream()
                 .map(f -> f.getUser1().getId().equals(userId) ? f.getUser2() : f.getUser1())
                 .collect(Collectors.toList());
+
+        log.info("[SOS] Found {} friends to notify for user {}", friends.size(), userId);
 
         List<SOSAlertRecipient> recipients = new ArrayList<>();
         List<TriggerSOSResponse.RecipientInfo> recipientInfos = new ArrayList<>();
@@ -86,6 +88,7 @@ public class SOSServiceImpl implements SOSService {
                     .build());
 
             // 3. Create persistent notification for each friend
+            log.info("[SOS] Creating notification for friend: {} (ID: {})", friend.getName(), friend.getId());
             notificationService.createNotification(sender, friend, NotificationType.SOS_ALERT, "SOS_ALERT", alert.getId());
         }
 
