@@ -61,26 +61,46 @@ public class AdminUserService {
 
     @Transactional
     public void updateUserStatus(String userId, UpdateUserStatusRequest request) {
-        log.info("Updating user {} status to {}", userId, request.getStatus());
+        log.info("Updating user {} status to {} with reason: {}", userId, request.getStatus(), request.getReason());
         
         Long id = Long.parseLong(userId);
         User user = userRepository.findById(id)
             .orElseThrow(() -> new NotFoundException("User not found"));
         
-        // Validate status - chỉ hỗ trợ ACTIVE và BLOCK
+        // Validate and map status
         AccountStatus newStatus;
-        if ("ACTIVE".equals(request.getStatus())) {
-            newStatus = AccountStatus.ACTIVE;
-        } else if ("BLOCK".equals(request.getStatus()) || "BANNED".equals(request.getStatus())) {
-            newStatus = AccountStatus.BLOCK;
-        } else {
-            throw new AppException("Invalid status. Only ACTIVE and BLOCK are supported.");
+        String statusUpper = request.getStatus().toUpperCase();
+        
+        switch (statusUpper) {
+            case "ACTIVE":
+                newStatus = AccountStatus.ACTIVE;
+                log.info("User {} is being activated/unbanned", userId);
+                break;
+            case "BLOCK":
+            case "BANNED":
+            case "SUSPENDED":
+                newStatus = AccountStatus.BLOCK;
+                log.info("User {} is being banned/blocked", userId);
+                break;
+            default:
+                throw new AppException("Invalid status: " + request.getStatus() + 
+                    ". Only ACTIVE, BLOCK, BANNED, and SUSPENDED are supported.");
         }
         
+        // Store previous status for logging
+        AccountStatus previousStatus = user.getStatus();
+        
+        // Update user status
         user.setStatus(newStatus);
         userRepository.save(user);
         
-        log.info("User {} status updated to {}", userId, newStatus);
+        // Log the action
+        log.info("User {} status updated from {} to {} by admin. Reason: {}", 
+                userId, previousStatus, newStatus, request.getReason());
+        
+        // TODO: Add audit log entry
+        // TODO: Send notification to user if notifyUser is true
+        // TODO: Handle expiration date for temporary bans
     }
 
     public Object getUserActivity(String userId, int days) {
